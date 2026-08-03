@@ -53,8 +53,25 @@ ok("iOS variant omits the Add button (no event to fire)",
 // don't nag the already-installed
 ok("suppressed when already installed",
    /display-mode: standalone/.test(HTML) && /if\(isInstalled\(\)\)return;/.test(HTML));
-ok("suppressed before first-run setup", /if\(!cfg\)return;/.test(HTML));
-ok("only shown on home", /if\(view\.name!=='home'\)return;/.test(HTML));
+
+// WHERE the banner may appear. The original report was "no install prompt on
+// FIRST load", so the first-run landing screen is the case that matters most —
+// it must NOT be gated behind company setup. But render() returns early when
+// there is no cfg, so reaching the banner there needs its own call site; a
+// guard change alone would silently do nothing.
+ok("no cfg gate suppressing first load", !/if\(!cfg\)return;/.test(HTML));
+ok("guard only blocks other screens once set up",
+   /if\(cfg&&view\.name!=='home'\)return;/.test(HTML));
+ok("first-run landing reaches the banner",
+   /renderFirstRun\(\);\s*\n\s*maybeShowInstall\(\);/.test(HTML));
+// the wizard never RAISES the banner. A banner already raised on the landing
+// screen persists across navigation (same as the update/backup banners) — that
+// is the observed behaviour, not a per-screen hide.
+ok("the setup wizard never raises the banner",
+   /if\(view\.name==='setup'\)\{renderSetup\(\);return;\}/.test(HTML));
+ok("three call sites (event, render tail, first-run)",
+   (HTML.match(/maybeShowInstall\(\);/g) || []).length === 3,
+   (HTML.match(/maybeShowInstall\(\);/g) || []).length);
 
 // ---- mutual exclusion: the banners share one slot --------------------------
 ok("install yields to update + backup banners", /function bannerBusy\(\)/.test(HTML));

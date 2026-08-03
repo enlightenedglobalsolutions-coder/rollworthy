@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>
-window.EGS_VERSION = '2026.08.03-1202';
+window.EGS_VERSION = '2026.08.03-1209';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('service-worker.js').then(function (reg) {
@@ -2627,8 +2627,9 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',appl
 function render(){
   applyTheme();
   if(!cfg){
-    if(view.name==='setup')renderSetup();
-    else renderFirstRun();
+    if(view.name==='setup'){renderSetup();return;}   /* no banner over the wizard */
+    renderFirstRun();
+    maybeShowInstall();
     return;
   }
   switch(view.name){
@@ -3111,8 +3112,8 @@ function bannerBusy(){
 }
 function maybeShowInstall(){
   if(installShown)return;
-  if(view.name!=='home')return;              /* never mid-inspection */
-  if(!cfg)return;                            /* not through first-run setup yet */
+  /* first-run landing counts as home for the install banner */
+  if(cfg&&view.name!=='home')return;         /* never mid-inspection */
   if(isInstalled())return;                   /* already on the home screen */
   if(localStorage.getItem(LS_INSTALL))return;/* dismissed before */
   if(bannerBusy())return;
