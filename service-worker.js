@@ -12,14 +12,14 @@
 importScripts('./sw_logic.js');   // provides self.EGS_SW
 
 const APP_NAME      = 'rollworthy';      // <-- the ONE line you change per app
-const CACHE_VERSION = '2026.08.03-0946'; // <-- egs-deploy.sh stamps this each deploy
+const CACHE_VERSION = '2026.08.03-1202'; // <-- egs-deploy.sh stamps this each deploy
 const CACHE = EGS_SW.cacheName(APP_NAME, CACHE_VERSION);
 
 // Offline shell. For single-file apps this is basically index.html + icons.
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './sw_logic.js',
   './icons/icon-192.png', './icons/icon-512.png',
-  './icons/icon-maskable-512.png', './icons/icon-180.png'
+  './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (e) => {

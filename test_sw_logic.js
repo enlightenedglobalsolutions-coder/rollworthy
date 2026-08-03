@@ -66,8 +66,21 @@ ok("CACHE_VERSION is in the form egs-deploy.sh stamps",
 const shell = /const SHELL = \[([\s\S]*?)\]/.exec(SW);
 const shellSrc = shell ? shell[1] : '';
 ['index.html', 'manifest.webmanifest', 'sw_logic.js',
- 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-180.png']
+ 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png']
   .forEach((asset) => ok("SHELL precaches " + asset, shellSrc.indexOf(asset) !== -1));
+
+// the placeholder apple-touch name is gone everywhere, not just renamed in one place
+ok("no icon-180.png reference survives anywhere",
+   SW.indexOf('icon-180') === -1 &&
+   fs.readFileSync(path.join(HERE, 'index.html'), 'utf8').indexOf('icon-180') === -1);
+
+// every SHELL asset must exist — a precache miss is silent (addAll is caught)
+const shellAssets = (shellSrc.match(/'\.\/([^']+)'/g) || [])
+  .map((s) => s.replace(/^'\.\//, '').replace(/'$/, ''))
+  .filter(Boolean);
+const missing = shellAssets.filter((a) => !fs.existsSync(path.join(HERE, a)));
+ok("every SHELL asset exists on disk (" + shellAssets.length + " checked)",
+   missing.length === 0, missing.join(','));
 
 // no drift between the tested core and the platform source it came from
 const platformLogic = path.join(HERE, '..', '..', 'platform', 'sw_logic.js');

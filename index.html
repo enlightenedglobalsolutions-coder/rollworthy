@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1A1E25">
 <title>Rollworthy</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>
-window.EGS_VERSION = '2026.08.03-0946';
+window.EGS_VERSION = '2026.08.03-1202';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('service-worker.js').then(function (reg) {
@@ -109,6 +109,12 @@ textarea{min-height:70px}
 .banner{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:50;
   background:var(--surface);border:1.5px solid var(--gold);border-radius:12px;padding:12px;display:none;box-shadow:var(--shadow)}
 .banner.show{display:block}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 76px);
+  z-index:60;background:var(--text);color:var(--surface);padding:10px 16px;border-radius:999px;
+  font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .18s}
+#toast.show{opacity:1}
+.hbtn.share svg{width:20px;height:20px;display:block;margin:auto}
+.sg{display:inline-flex;width:18px;height:18px}
 .alertbar{border-radius:12px;padding:12px;margin-bottom:14px;font-weight:600}
 .alertbar.major{background:var(--bad);color:var(--bad-ink)}
 .alertbar.softwarn{border:1.5px solid var(--warn);color:var(--warn)}
@@ -162,6 +168,8 @@ footer.egs{text-align:center;color:var(--muted);font-size:12px;padding:20px 0 8p
   </div>
 </div>
 <div id="nudgeBanner" class="banner"></div>
+<div id="installBanner" class="banner"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <div id="modal"><div class="sheet" id="modalBody"></div></div>
 
@@ -2483,7 +2491,17 @@ var qrcode = function() {
 'use strict';
 
 /* ---------- constants & defaults ---------- */
-var LS_CFG='ft_cfg', LS_REC='ft_records', LS_RES='ft_res', LS_DRIVER='ft_driver', LS_NUDGE='ft_nudge';
+var LS_CFG='ft_cfg', LS_REC='ft_records', LS_RES='ft_res', LS_DRIVER='ft_driver', LS_NUDGE='ft_nudge',
+    LS_INSTALL='ft_installDismissed';
+/* Every key above is ft_-prefixed on purpose. All EGS apps share one
+   origin, so a bare key is a cross-app collision — that is what silenced
+   Kept's install banner (DECISIONS 2026-08-01). */
+
+/* Host-supplied by the EGS core blocks. APP_NAME is the display name;
+   SHARE_APP_LINE is this app's own one-line pitch, and the ONLY prose that
+   should differ between apps carrying the core share block. */
+var APP_NAME='Rollworthy';
+var SHARE_APP_LINE='Rollworthy \u2014 vehicle check-out & inspection records that stay on your phone.';
 var DB_NAME='fleettracer', DB_STORE='photos'; /* internal names — never rename */
 
 var DEFAULT_LIGHT=['Walkaround — body damage','Tires — tread, pressure, damage','Lights & signals','Windshield, mirrors & glass','Wipers & washer fluid','Engine oil level','Coolant level','Brakes & parking brake','Horn','Seatbelts','Interior cleanliness','Safety equipment — first aid, extinguisher, triangles','Registration & insurance in vehicle'];
@@ -2592,7 +2610,8 @@ function header(title,sub,back){
   return '<header class="app">'+
     (back?'<button class="hbtn" data-action="'+esc(back)+'">‹</button>':'')+
     '<h1>'+esc(title)+(sub?'<small>'+esc(sub)+'</small>':'')+'</h1>'+
-    (view.name==='home'?'<button class="hbtn" data-action="openMenu">☰</button>':'')+
+    (view.name==='home'?'<button class="hbtn share" data-action="shareApp" aria-label="Share '+esc(APP_NAME)+'">'+EGS_SHARE_GLYPH+'</button>'+
+      '<button class="hbtn" data-action="openMenu">☰</button>':'')+
   '</header>';
 }
 function infoI(key){return '<button class="info-i" data-action="showInfo" data-info="'+esc(key)+'">i</button>';}
@@ -2622,6 +2641,7 @@ function render(){
     case 'privacy': renderPrivacy(); break;
     default: renderHome();
   }
+  maybeShowInstall();
   maybeNudge();
 }
 
@@ -2870,7 +2890,10 @@ function renderManager(){
       '<p class="muted">NSC 13 note: keep commercial inspection records at least 6 months. Your backups are your retention — export regularly.</p></div>'+
     '<div class="card"><button class="btn" data-action="privacyM">Privacy</button></div>';
   }
-  h(header('Manager', cfg.company, 'goHome')+'<main><div class="tabs">'+tabs+'</div>'+body+'</main>');
+  h(header('Manager', cfg.company, 'goHome')+'<main><div class="tabs">'+tabs+'</div>'+body+
+    '<footer class="egs" id="mgr-version">'+esc(APP_NAME)+' \u00b7 EGS \u00b7 v'+esc(window.EGS_VERSION)+
+    '<br>This is the version running on this phone.</footer>'+
+  '</main>');
 }
 function chkEditor(key,title){
   var items=cfg.checklist[key].map(function(it,i){
@@ -2897,6 +2920,11 @@ function renderPrivacy(){
   '<p><strong>When the app touches the internet:</strong> only to load its own updated version when you\u2019re online. Your records and photos are never transmitted unless <em>you</em> tap Share — and then they go only where you send them.</p>'+
   '<p><strong>The manager PIN</strong> is a convenience lock stored on this device. It deters casual access; it is not encryption.</p>'+
   '<p><strong>How EGS makes money:</strong> a fair one-time price paid by the company. No subscriptions hidden in this version, no data resale, no ads. What you see is what you get. 🍁</p>'+
+  '</div>'+
+  '<div class="card stack">'+
+  '<h2>Share '+esc(APP_NAME)+'</h2>'+
+  '<p class="muted">Passing it on is its own kind of support, and it costs nothing. This sends the app\u2019s public link and nothing else \u2014 none of your records, vehicles or drivers go with it.</p>'+
+  '<button class="btn" data-action="shareApp" style="display:flex;align-items:center;justify-content:center;gap:8px"><span class="sg">'+EGS_SHARE_GLYPH+'</span> Share '+esc(APP_NAME)+'</button>'+
   '</div></main>');
 }
 
@@ -3065,8 +3093,64 @@ function closeScan(){
 }
 
 /* ---------- nudge ---------- */
+/* ---------- install prompt ---------- */
+var deferredInstall=null, installShown=false;
+
+/* iOS/iPadOS Safari never fires beforeinstallprompt. navigator.standalone is a
+   WebKit-only property, so its presence is a feature test for that family —
+   not user-agent sniffing, which lies (iPadOS reports itself as a Mac). */
+function isIOSSafari(){return 'standalone' in navigator;}
+function isInstalled(){
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
+}
+/* One banner at a time. Install always yields to the update banner and the
+   backup nudge — both matter more than an install suggestion. */
+function bannerBusy(){
+  var u=document.getElementById('updateBanner'), n=document.getElementById('nudgeBanner');
+  return !!((u&&u.classList.contains('show'))||(n&&n.classList.contains('show')));
+}
+function maybeShowInstall(){
+  if(installShown)return;
+  if(view.name!=='home')return;              /* never mid-inspection */
+  if(!cfg)return;                            /* not through first-run setup yet */
+  if(isInstalled())return;                   /* already on the home screen */
+  if(localStorage.getItem(LS_INSTALL))return;/* dismissed before */
+  if(bannerBusy())return;
+  if(!deferredInstall&&!isIOSSafari())return;/* nothing to offer on this browser */
+  showInstallBanner(deferredInstall?'prompt':'ios');
+}
+function showInstallBanner(mode){
+  installShown=true;
+  var b=document.getElementById('installBanner');
+  if(!b)return;
+  b.innerHTML='<div class="row between"><div><strong>Add '+esc(APP_NAME)+' to your home screen</strong>'+
+    '<div class="muted">'+(mode==='prompt'
+      ? 'Opens full screen and works with no signal.'
+      : 'Tap Share, then \u201cAdd to Home Screen\u201d.')+'</div></div>'+
+    '<div class="row">'+
+      (mode==='prompt'?'<button class="btn small primary" data-action="installGo">Add</button>':'')+
+      '<button class="btn small" data-action="installDismiss">Not now</button>'+
+    '</div></div>';
+  b.classList.add('show');
+}
+function hideInstallBanner(){
+  var b=document.getElementById('installBanner');
+  if(b)b.classList.remove('show');
+}
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();          /* keep Chrome's own UI out of the way */
+  deferredInstall=e;
+  maybeShowInstall();
+});
+window.addEventListener('appinstalled',function(){
+  localStorage.setItem(LS_INSTALL,'1');
+  hideInstallBanner();
+});
+
 function maybeNudge(){
   if(view.name!=='home')return;
+  var ib=document.getElementById('installBanner');
+  if(ib&&ib.classList.contains('show'))return;   /* never stack on the install banner */
   if(!records.length)return;
   var snooze=parseInt(localStorage.getItem(LS_NUDGE)||'0',10);
   if(Date.now()<snooze)return;
@@ -3079,6 +3163,65 @@ function maybeNudge(){
   nb.classList.add('show');
 }
 
+/* ============================================================
+   EGS CORE — SHARE · v2
+   Ported from Notebuilt, the reference v2 implementation. Do not
+   edit this block per-app — only APP_NAME and SHARE_APP_LINE
+   (near the top of the file) carry app-specific content.
+   ============================================================ */
+
+/* Feather "share-2", the glyph WFD uses — stroked currentColor so it takes
+   the host app's icon colour. */
+var EGS_SHARE_GLYPH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+
+function appShareUrl(){
+  /* the app's own directory URL, never a deep link into any state */
+  return location.origin+location.pathname.replace(/[^/]*$/,'');
+}
+
+/* The ONE share handler. Every entry point calls this — the header icon and
+   the Privacy-page block both land here. It can only ever send the public app
+   link: no record, photo, vehicle, driver, PIN or company setting is reachable
+   from it, and keeping that true is the point. */
+function doShareApp(){
+  var url=appShareUrl();
+  if(navigator.share){
+    navigator.share({title:APP_NAME,text:SHARE_APP_LINE,url:url})
+      .catch(function(err){
+        if(err&&err.name==='AbortError')return;   /* user backed out — say nothing */
+        shareAppClipboard(url);                   /* anything else: fall through */
+      });
+    return;
+  }
+  shareAppClipboard(url);
+}
+
+function shareAppClipboard(url){
+  var line=SHARE_APP_LINE+' '+url;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(line).then(function(){toast('Link copied');})
+      .catch(function(){shareAppFallback(line);});
+  }else shareAppFallback(line);
+}
+
+/* clipboard refused (insecure context, permissions) — show the link instead of
+   swallowing it, so there is always a way to get it out */
+function shareAppFallback(line){
+  showModal('<div class="stack"><h2>Share '+esc(APP_NAME)+'</h2>'+
+    '<p class="muted">Copy this and send it on:</p>'+
+    '<div class="card" style="word-break:break-all;font-size:13px;line-height:1.6">'+esc(line)+'</div>'+
+    '<button class="btn" data-action="closeModal">Close</button></div>');
+}
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(function(){t.classList.remove('show');},1900);
+}
+
 /* ---------- modal ---------- */
 function showModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modal').classList.add('show');}
 function hideModal(){document.getElementById('modal').classList.remove('show');}
@@ -3088,6 +3231,13 @@ var actions={
   applyUpdate:function(){if(navigator.serviceWorker&&navigator.serviceWorker.getRegistration){navigator.serviceWorker.getRegistration().then(function(r){if(r&&r.waiting)r.waiting.postMessage('skip');location.reload();});}else location.reload();},
   showInfo:function(el){showModal('<p>'+esc(INFO[el.getAttribute('data-info')]||'')+'</p><button class="btn primary" data-action="closeModal">Got it</button>');},
   closeModal:hideModal,
+  shareApp:function(){doShareApp();},
+  installGo:function(){
+    if(!deferredInstall){hideInstallBanner();return;}
+    deferredInstall.prompt();
+    deferredInstall.userChoice.then(function(){deferredInstall=null;hideInstallBanner();});
+  },
+  installDismiss:function(){localStorage.setItem(LS_INSTALL,'1');hideInstallBanner();},
   privacy:function(){go('privacy');},
   privacyM:function(){go('privacy');},
   goHome:function(){draft=null;go('home');},
