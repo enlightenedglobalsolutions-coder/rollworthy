@@ -96,9 +96,19 @@ ok("backup filename is rollworthy-backup-<date>.json",
    /'rollworthy-backup-'\+todayStr\(\)\+'\.json'/.test(HTML));
 
 // ---- version stamp ---------------------------------------------------------
-ok("two visible version stamps (home + Manager)",
-   (HTML.match(/esc\(window\.EGS_VERSION\)/g) || []).length === 2);
+// Three stamps, one source. The first-run one is the load-bearing case: it is
+// the ONLY screen a fresh visitor or incognito window sees, and without it a
+// correct deploy is indistinguishable from a failed one.
+ok("three visible version stamps (first-run + home + Manager)",
+   (HTML.match(/esc\(window\.EGS_VERSION\)/g) || []).length === 3,
+   (HTML.match(/esc\(window\.EGS_VERSION\)/g) || []).length);
 ok("Manager stamp is identifiable", /id="mgr-version"/.test(HTML));
+ok("first-run stamp is identifiable", /id="firstrun-version"/.test(HTML));
+
+const firstRun = /function renderFirstRun\(\)\{[\s\S]*?\n\}/.exec(HTML);
+ok("renderFirstRun() found", !!firstRun);
+ok("version is readable with NO company set up",
+   !!firstRun && firstRun[0].indexOf('window.EGS_VERSION') !== -1);
 ok("version is stamped in the deploy-rewritable form",
    /window\.EGS_VERSION = '\d{4}\.\d{2}\.\d{2}-\d{4}';/.test(HTML));
 
