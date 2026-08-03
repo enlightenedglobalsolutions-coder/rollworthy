@@ -1,0 +1,3245 @@
+<!DOCTYPE html>
+<!--
+  Rollworthy — vehicle check-out & inspection records for small fleets
+  (c) 2026 Enlightened Global Solutions (EGS). All rights reserved.
+  Unauthorised copying, modification or distribution prohibited.
+  Privacy-first: all data stays on this device. No accounts. No tracking.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1A1E25">
+<title>Rollworthy</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<script>
+window.EGS_VERSION = '2026.08.03-0946';
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('service-worker.js').then(function (reg) {
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function () {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            var b = document.getElementById('updateBanner');
+            if (b) b.classList.add('show');
+          }
+        });
+      });
+    }).catch(function(){});
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (refreshing) return; refreshing = true; location.reload();
+    });
+  });
+}
+</script>
+<style>
+:root{
+  --bg:#F4F1EA; --surface:#FFFFFF; --surface2:#ECE7DC;
+  --text:#22262E; --muted:#5C6270; --line:#D8D2C4;
+  --blue:#185FA5; --blue-ink:#FFFFFF;
+  --gold:#B8860B; --gold-soft:#8a6a1f;
+  --ok:#1E7D3C; --warn:#B26A00; --bad:#B3261E; --bad-ink:#fff;
+  --shadow:0 1px 3px rgba(0,0,0,.12);
+}
+[data-theme="dark"]{
+  --bg:#14171D; --surface:#1A1E25; --surface2:#232833;
+  --text:#EDE8DC; --muted:#9AA0AC; --line:#333A46;
+  --blue:#3D82C4; --blue-ink:#0E1420;
+  --gold:#D6A84B; --gold-soft:#EEC670;
+  --ok:#4CC072; --warn:#E0A23F; --bad:#E5655C; --bad-ink:#14171D;
+  --shadow:0 1px 3px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:calc(env(safe-area-inset-bottom) + 12px)}
+header.app{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:2px solid var(--gold);
+  padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
+header.app h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.3px;flex:1}
+header.app h1 small{display:block;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.5px}
+.hbtn{background:none;border:1px solid var(--line);color:var(--text);border-radius:10px;min-width:44px;min-height:44px;
+  font-size:15px;display:flex;align-items:center;justify-content:center;padding:0 10px}
+main{padding:14px;max-width:640px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 8px;font-size:17px}
+.card h3{margin:12px 0 6px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.big{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:64px;border-radius:14px;
+  border:none;font-size:18px;font-weight:700;margin-bottom:12px;box-shadow:var(--shadow)}
+.big.out{background:var(--blue);color:var(--blue-ink)}
+.big.in{background:var(--surface);color:var(--text);border:2px solid var(--blue)}
+.btn{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);
+  font-size:15px;padding:8px 14px}
+.btn.primary{background:var(--blue);color:var(--blue-ink);border-color:var(--blue);font-weight:600}
+.btn.gold{background:transparent;color:var(--gold);border:1.5px solid var(--gold);font-weight:600}
+.btn.danger{background:transparent;color:var(--bad);border-color:var(--bad)}
+.btn.small{min-height:36px;font-size:13px;padding:4px 10px}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.stack>*+*{margin-top:10px}
+label.f{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input[type=text],input[type=number],input[type=password],select,textarea{
+  width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);
+  color:var(--text);font-size:16px;padding:8px 12px}
+textarea{min-height:70px}
+.vrow{display:flex;align-items:center;gap:10px;padding:12px 10px;border-bottom:1px solid var(--line);width:100%;
+  background:none;border-left:none;border-right:none;border-top:none;color:var(--text);text-align:left;font-size:16px}
+.vrow:last-child{border-bottom:none}
+.vrow .unit{font-weight:700;font-size:17px;min-width:64px;color:var(--blue)}
+[data-theme="dark"] .vrow .unit{color:var(--gold-soft)}
+.vrow .sub{font-size:13px;color:var(--muted)}
+.tag{font-size:11px;border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:1px 6px;letter-spacing:.4px}
+.item{padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:none}
+.item .lbl{font-size:15px;margin-bottom:6px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:14px;font-weight:600}
+.seg button.on-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.seg button.on-def{background:var(--bad);border-color:var(--bad);color:var(--bad-ink)}
+.seg button.on-min{background:var(--warn);border-color:var(--warn);color:#fff}
+.defbox{margin-top:8px;padding:10px;border:1px dashed var(--bad);border-radius:10px}
+.fuel{display:flex;gap:6px}
+.fuel button{flex:1;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-weight:700}
+.fuel button.on{background:var(--blue);border-color:var(--blue);color:var(--blue-ink)}
+.photo-thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.banner{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:50;
+  background:var(--surface);border:1.5px solid var(--gold);border-radius:12px;padding:12px;display:none;box-shadow:var(--shadow)}
+.banner.show{display:block}
+.alertbar{border-radius:12px;padding:12px;margin-bottom:14px;font-weight:600}
+.alertbar.major{background:var(--bad);color:var(--bad-ink)}
+.alertbar.softwarn{border:1.5px solid var(--warn);color:var(--warn)}
+.tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto}
+.tabs button{min-height:42px;padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:14px;white-space:nowrap}
+.tabs button.on{background:var(--blue);border-color:var(--blue);color:var(--blue-ink);font-weight:600}
+.rec{padding:10px 0;border-bottom:1px solid var(--line)}
+.rec .top{display:flex;justify-content:space-between;font-size:15px}
+.rec .sub{font-size:13px;color:var(--muted)}
+.pill{font-size:11px;border-radius:6px;padding:2px 7px;font-weight:700}
+.pill.out{background:var(--blue);color:var(--blue-ink)}
+.pill.in{border:1px solid var(--blue);color:var(--blue)}
+.pill.def{background:var(--bad);color:var(--bad-ink)}
+.pill.res{background:var(--ok);color:#fff}
+.info-i{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;
+  border:1.5px solid var(--gold);color:var(--gold);font-size:12px;font-style:italic;font-weight:700;margin-left:6px;vertical-align:middle;background:none}
+body.expert .info-i{display:none}
+.muted{color:var(--muted);font-size:13px}
+.center{text-align:center}
+hr.soft{border:none;border-top:1px solid var(--line);margin:14px 0}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;display:none;align-items:flex-end;justify-content:center}
+#modal.show{display:flex}
+#modal .sheet{background:var(--surface);border-radius:16px 16px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);
+  width:100%;max-width:640px;max-height:80vh;overflow:auto}
+#camWrap{position:fixed;inset:0;background:#000;z-index:70;display:none;flex-direction:column}
+#camWrap.show{display:flex}
+#camWrap video{flex:1;object-fit:cover;width:100%}
+#camWrap .bar{padding:14px;padding-bottom:calc(env(safe-area-inset-bottom) + 14px);background:#000;text-align:center}
+.sticker-sheet{display:none}
+@media print{
+  body *{visibility:hidden}
+  body{background:#fff}
+  .sticker-sheet,.sticker-sheet *{visibility:visible}
+  .sticker-sheet{display:block;position:absolute;top:0;left:0;width:100%}
+  .sticker{border:2px solid #000;border-radius:10px;padding:14px;margin:0 0 18px;page-break-inside:avoid;text-align:center;width:280px}
+  .sticker .u{font-size:34px;font-weight:800;margin:6px 0}
+  .sticker .c{font-size:13px}
+  .sticker svg{width:170px;height:170px}
+}
+.q-grid{display:flex;justify-content:center;margin:8px 0}
+footer.egs{text-align:center;color:var(--muted);font-size:12px;padding:20px 0 8px}
+</style>
+</head>
+<body>
+<div id="app"><main><div class="card center"><p>Loading Rollworthy…</p></div></main></div>
+
+<div id="updateBanner" class="banner">
+  <div class="row between">
+    <div><strong>Update ready</strong><div class="muted">A new version of Rollworthy is available.</div></div>
+    <button class="btn primary" data-action="applyUpdate">Refresh</button>
+  </div>
+</div>
+<div id="nudgeBanner" class="banner"></div>
+
+<div id="modal"><div class="sheet" id="modalBody"></div></div>
+
+<div id="camWrap">
+  <video id="camVideo" playsinline muted></video>
+  <div class="bar"><button class="btn" data-action="closeScan">Cancel</button>
+  <div style="color:#fff;font-size:13px;margin-top:8px">Point the camera at the dash sticker</div></div>
+</div>
+
+<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="importInput" accept="application/json,.json" style="display:none">
+
+<div id="stickerSheet" class="sticker-sheet"></div>
+
+<script>
+/* ---- vendored QR encoder (MIT, Kazuhiko Arase) ---- */
+//---------------------------------------------------------------------
+//
+// QR Code Generator for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+//
+// The word 'QR Code' is registered trademark of
+// DENSO WAVE INCORPORATED
+//  http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+
+var qrcode = function() {
+
+  //---------------------------------------------------------------------
+  // qrcode
+  //---------------------------------------------------------------------
+
+  /**
+   * qrcode
+   * @param typeNumber 1 to 40
+   * @param errorCorrectionLevel 'L','M','Q','H'
+   */
+  var qrcode = function(typeNumber, errorCorrectionLevel) {
+
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = QRErrorCorrectionLevel[errorCorrectionLevel];
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var _this = {};
+
+    var makeImpl = function(test, maskPattern) {
+
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = function(moduleCount) {
+        var modules = new Array(moduleCount);
+        for (var row = 0; row < moduleCount; row += 1) {
+          modules[row] = new Array(moduleCount);
+          for (var col = 0; col < moduleCount; col += 1) {
+            modules[row][col] = null;
+          }
+        }
+        return modules;
+      }(_moduleCount);
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupPositionAdjustPattern();
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_typeNumber >= 7) {
+        setupTypeNumber(test);
+      }
+
+      if (_dataCache == null) {
+        _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      }
+
+      mapData(_dataCache, maskPattern);
+    };
+
+    var setupPositionProbePattern = function(row, col) {
+
+      for (var r = -1; r <= 7; r += 1) {
+
+        if (row + r <= -1 || _moduleCount <= row + r) continue;
+
+        for (var c = -1; c <= 7; c += 1) {
+
+          if (col + c <= -1 || _moduleCount <= col + c) continue;
+
+          if ( (0 <= r && r <= 6 && (c == 0 || c == 6) )
+              || (0 <= c && c <= 6 && (r == 0 || r == 6) )
+              || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+            _modules[row + r][col + c] = true;
+          } else {
+            _modules[row + r][col + c] = false;
+          }
+        }
+      }
+    };
+
+    var getBestMaskPattern = function() {
+
+      var minLostPoint = 0;
+      var pattern = 0;
+
+      for (var i = 0; i < 8; i += 1) {
+
+        makeImpl(true, i);
+
+        var lostPoint = QRUtil.getLostPoint(_this);
+
+        if (i == 0 || minLostPoint > lostPoint) {
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+
+      return pattern;
+    };
+
+    var setupTimingPattern = function() {
+
+      for (var r = 8; r < _moduleCount - 8; r += 1) {
+        if (_modules[r][6] != null) {
+          continue;
+        }
+        _modules[r][6] = (r % 2 == 0);
+      }
+
+      for (var c = 8; c < _moduleCount - 8; c += 1) {
+        if (_modules[6][c] != null) {
+          continue;
+        }
+        _modules[6][c] = (c % 2 == 0);
+      }
+    };
+
+    var setupPositionAdjustPattern = function() {
+
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+
+      for (var i = 0; i < pos.length; i += 1) {
+
+        for (var j = 0; j < pos.length; j += 1) {
+
+          var row = pos[i];
+          var col = pos[j];
+
+          if (_modules[row][col] != null) {
+            continue;
+          }
+
+          for (var r = -2; r <= 2; r += 1) {
+
+            for (var c = -2; c <= 2; c += 1) {
+
+              if (r == -2 || r == 2 || c == -2 || c == 2
+                  || (r == 0 && c == 0) ) {
+                _modules[row + r][col + c] = true;
+              } else {
+                _modules[row + r][col + c] = false;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var setupTypeNumber = function(test) {
+
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _moduleCount - 8 - 3] = mod;
+      }
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[i % 3 + _moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    };
+
+    var setupTypeInfo = function(test, maskPattern) {
+
+      var data = (_errorCorrectionLevel << 3) | maskPattern;
+      var bits = QRUtil.getBCHTypeInfo(data);
+
+      // vertical
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 6) {
+          _modules[i][8] = mod;
+        } else if (i < 8) {
+          _modules[i + 1][8] = mod;
+        } else {
+          _modules[_moduleCount - 15 + i][8] = mod;
+        }
+      }
+
+      // horizontal
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 8) {
+          _modules[8][_moduleCount - i - 1] = mod;
+        } else if (i < 9) {
+          _modules[8][15 - i - 1 + 1] = mod;
+        } else {
+          _modules[8][15 - i - 1] = mod;
+        }
+      }
+
+      // fixed module
+      _modules[_moduleCount - 8][8] = (!test);
+    };
+
+    var mapData = function(data, maskPattern) {
+
+      var inc = -1;
+      var row = _moduleCount - 1;
+      var bitIndex = 7;
+      var byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(maskPattern);
+
+      for (var col = _moduleCount - 1; col > 0; col -= 2) {
+
+        if (col == 6) col -= 1;
+
+        while (true) {
+
+          for (var c = 0; c < 2; c += 1) {
+
+            if (_modules[row][col - c] == null) {
+
+              var dark = false;
+
+              if (byteIndex < data.length) {
+                dark = ( ( (data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              var mask = maskFunc(row, col - c);
+
+              if (mask) {
+                dark = !dark;
+              }
+
+              _modules[row][col - c] = dark;
+              bitIndex -= 1;
+
+              if (bitIndex == -1) {
+                byteIndex += 1;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || _moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    };
+
+    var createBytes = function(buffer, rsBlocks) {
+
+      var offset = 0;
+
+      var maxDcCount = 0;
+      var maxEcCount = 0;
+
+      var dcdata = new Array(rsBlocks.length);
+      var ecdata = new Array(rsBlocks.length);
+
+      for (var r = 0; r < rsBlocks.length; r += 1) {
+
+        var dcCount = rsBlocks[r].dataCount;
+        var ecCount = rsBlocks[r].totalCount - dcCount;
+
+        maxDcCount = Math.max(maxDcCount, dcCount);
+        maxEcCount = Math.max(maxEcCount, ecCount);
+
+        dcdata[r] = new Array(dcCount);
+
+        for (var i = 0; i < dcdata[r].length; i += 1) {
+          dcdata[r][i] = 0xff & buffer.getBuffer()[i + offset];
+        }
+        offset += dcCount;
+
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = qrPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+        var modPoly = rawPoly.mod(rsPoly);
+        ecdata[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecdata[r].length; i += 1) {
+          var modIndex = i + modPoly.getLength() - ecdata[r].length;
+          ecdata[r][i] = (modIndex >= 0)? modPoly.getAt(modIndex) : 0;
+        }
+      }
+
+      var totalCodeCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalCodeCount += rsBlocks[i].totalCount;
+      }
+
+      var data = new Array(totalCodeCount);
+      var index = 0;
+
+      for (var i = 0; i < maxDcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < dcdata[r].length) {
+            data[index] = dcdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      for (var i = 0; i < maxEcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < ecdata[r].length) {
+            data[index] = ecdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      return data;
+    };
+
+    var createData = function(typeNumber, errorCorrectionLevel, dataList) {
+
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+
+      var buffer = qrBitBuffer();
+
+      for (var i = 0; i < dataList.length; i += 1) {
+        var data = dataList[i];
+        buffer.put(data.getMode(), 4);
+        buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+        data.write(buffer);
+      }
+
+      // calc num max data.
+      var totalDataCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalDataCount += rsBlocks[i].dataCount;
+      }
+
+      if (buffer.getLengthInBits() > totalDataCount * 8) {
+        throw 'code length overflow. ('
+          + buffer.getLengthInBits()
+          + '>'
+          + totalDataCount * 8
+          + ')';
+      }
+
+      // end code
+      if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+        buffer.put(0, 4);
+      }
+
+      // padding
+      while (buffer.getLengthInBits() % 8 != 0) {
+        buffer.putBit(false);
+      }
+
+      // padding
+      while (true) {
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD0, 8);
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD1, 8);
+      }
+
+      return createBytes(buffer, rsBlocks);
+    };
+
+    _this.addData = function(data, mode) {
+
+      mode = mode || 'Byte';
+
+      var newData = null;
+
+      switch(mode) {
+      case 'Numeric' :
+        newData = qrNumber(data);
+        break;
+      case 'Alphanumeric' :
+        newData = qrAlphaNum(data);
+        break;
+      case 'Byte' :
+        newData = qr8BitByte(data);
+        break;
+      case 'Kanji' :
+        newData = qrKanji(data);
+        break;
+      default :
+        throw 'mode:' + mode;
+      }
+
+      _dataList.push(newData);
+      _dataCache = null;
+    };
+
+    _this.isDark = function(row, col) {
+      if (row < 0 || _moduleCount <= row || col < 0 || _moduleCount <= col) {
+        throw row + ',' + col;
+      }
+      return _modules[row][col];
+    };
+
+    _this.getModuleCount = function() {
+      return _moduleCount;
+    };
+
+    _this.make = function() {
+      if (_typeNumber < 1) {
+        var typeNumber = 1;
+
+        for (; typeNumber < 40; typeNumber++) {
+          var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, _errorCorrectionLevel);
+          var buffer = qrBitBuffer();
+
+          for (var i = 0; i < _dataList.length; i++) {
+            var data = _dataList[i];
+            buffer.put(data.getMode(), 4);
+            buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+            data.write(buffer);
+          }
+
+          var totalDataCount = 0;
+          for (var i = 0; i < rsBlocks.length; i++) {
+            totalDataCount += rsBlocks[i].dataCount;
+          }
+
+          if (buffer.getLengthInBits() <= totalDataCount * 8) {
+            break;
+          }
+        }
+
+        _typeNumber = typeNumber;
+      }
+
+      makeImpl(false, getBestMaskPattern() );
+    };
+
+    _this.createTableTag = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var qrHtml = '';
+
+      qrHtml += '<table style="';
+      qrHtml += ' border-width: 0px; border-style: none;';
+      qrHtml += ' border-collapse: collapse;';
+      qrHtml += ' padding: 0px; margin: ' + margin + 'px;';
+      qrHtml += '">';
+      qrHtml += '<tbody>';
+
+      for (var r = 0; r < _this.getModuleCount(); r += 1) {
+
+        qrHtml += '<tr>';
+
+        for (var c = 0; c < _this.getModuleCount(); c += 1) {
+          qrHtml += '<td style="';
+          qrHtml += ' border-width: 0px; border-style: none;';
+          qrHtml += ' border-collapse: collapse;';
+          qrHtml += ' padding: 0px; margin: 0px;';
+          qrHtml += ' width: ' + cellSize + 'px;';
+          qrHtml += ' height: ' + cellSize + 'px;';
+          qrHtml += ' background-color: ';
+          qrHtml += _this.isDark(r, c)? '#000000' : '#ffffff';
+          qrHtml += ';';
+          qrHtml += '"/>';
+        }
+
+        qrHtml += '</tr>';
+      }
+
+      qrHtml += '</tbody>';
+      qrHtml += '</table>';
+
+      return qrHtml;
+    };
+
+    _this.createSvgTag = function(cellSize, margin, alt, title) {
+
+      var opts = {};
+      if (typeof arguments[0] == 'object') {
+        // Called by options.
+        opts = arguments[0];
+        // overwrite cellSize and margin.
+        cellSize = opts.cellSize;
+        margin = opts.margin;
+        alt = opts.alt;
+        title = opts.title;
+      }
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      // Compose alt property surrogate
+      alt = (typeof alt === 'string') ? {text: alt} : alt || {};
+      alt.text = alt.text || null;
+      alt.id = (alt.text) ? alt.id || 'qrcode-description' : null;
+
+      // Compose title property surrogate
+      title = (typeof title === 'string') ? {text: title} : title || {};
+      title.text = title.text || null;
+      title.id = (title.text) ? title.id || 'qrcode-title' : null;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var c, mc, r, mr, qrSvg='', rect;
+
+      rect = 'l' + cellSize + ',0 0,' + cellSize +
+        ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+
+      qrSvg += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+      qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : '';
+      qrSvg += ' viewBox="0 0 ' + size + ' ' + size + '" ';
+      qrSvg += ' preserveAspectRatio="xMinYMin meet"';
+      qrSvg += (title.text || alt.text) ? ' role="img" aria-labelledby="' +
+          escapeXml([title.id, alt.id].join(' ').trim() ) + '"' : '';
+      qrSvg += '>';
+      qrSvg += (title.text) ? '<title id="' + escapeXml(title.id) + '">' +
+          escapeXml(title.text) + '</title>' : '';
+      qrSvg += (alt.text) ? '<description id="' + escapeXml(alt.id) + '">' +
+          escapeXml(alt.text) + '</description>' : '';
+      qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
+      qrSvg += '<path d="';
+
+      for (r = 0; r < _this.getModuleCount(); r += 1) {
+        mr = r * cellSize + margin;
+        for (c = 0; c < _this.getModuleCount(); c += 1) {
+          if (_this.isDark(r, c) ) {
+            mc = c*cellSize+margin;
+            qrSvg += 'M' + mc + ',' + mr + rect;
+          }
+        }
+      }
+
+      qrSvg += '" stroke="transparent" fill="black"/>';
+      qrSvg += '</svg>';
+
+      return qrSvg;
+    };
+
+    _this.createDataURL = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      return createDataURL(size, size, function(x, y) {
+        if (min <= x && x < max && min <= y && y < max) {
+          var c = Math.floor( (x - min) / cellSize);
+          var r = Math.floor( (y - min) / cellSize);
+          return _this.isDark(r, c)? 0 : 1;
+        } else {
+          return 1;
+        }
+      } );
+    };
+
+    _this.createImgTag = function(cellSize, margin, alt) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+
+      var img = '';
+      img += '<img';
+      img += '\u0020src="';
+      img += _this.createDataURL(cellSize, margin);
+      img += '"';
+      img += '\u0020width="';
+      img += size;
+      img += '"';
+      img += '\u0020height="';
+      img += size;
+      img += '"';
+      if (alt) {
+        img += '\u0020alt="';
+        img += escapeXml(alt);
+        img += '"';
+      }
+      img += '/>';
+
+      return img;
+    };
+
+    var escapeXml = function(s) {
+      var escaped = '';
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charAt(i);
+        switch(c) {
+        case '<': escaped += '&lt;'; break;
+        case '>': escaped += '&gt;'; break;
+        case '&': escaped += '&amp;'; break;
+        case '"': escaped += '&quot;'; break;
+        default : escaped += c; break;
+        }
+      }
+      return escaped;
+    };
+
+    var _createHalfASCII = function(margin) {
+      var cellSize = 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r1, r2, p;
+
+      var blocks = {
+        '██': '█',
+        '█ ': '▀',
+        ' █': '▄',
+        '  ': ' '
+      };
+
+      var blocksLastLineNoMargin = {
+        '██': '▀',
+        '█ ': '▀',
+        ' █': ' ',
+        '  ': ' '
+      };
+
+      var ascii = '';
+      for (y = 0; y < size; y += 2) {
+        r1 = Math.floor((y - min) / cellSize);
+        r2 = Math.floor((y + 1 - min) / cellSize);
+        for (x = 0; x < size; x += 1) {
+          p = '█';
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
+            p = ' ';
+          }
+
+          if (min <= x && x < max && min <= y+1 && y+1 < max && _this.isDark(r2, Math.floor((x - min) / cellSize))) {
+            p += ' ';
+          }
+          else {
+            p += '█';
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          ascii += (margin < 1 && y+1 >= max) ? blocksLastLineNoMargin[p] : blocks[p];
+        }
+
+        ascii += '\n';
+      }
+
+      if (size % 2 && margin > 0) {
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.createASCII = function(cellSize, margin) {
+      cellSize = cellSize || 1;
+
+      if (cellSize < 2) {
+        return _createHalfASCII(margin);
+      }
+
+      cellSize -= 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r, p;
+
+      var white = Array(cellSize+1).join('██');
+      var black = Array(cellSize+1).join('  ');
+
+      var ascii = '';
+      var line = '';
+      for (y = 0; y < size; y += 1) {
+        r = Math.floor( (y - min) / cellSize);
+        line = '';
+        for (x = 0; x < size; x += 1) {
+          p = 1;
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r, Math.floor((x - min) / cellSize))) {
+            p = 0;
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          line += p ? white : black;
+        }
+
+        for (r = 0; r < cellSize; r += 1) {
+          ascii += line + '\n';
+        }
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.renderTo2dContext = function(context, cellSize) {
+      cellSize = cellSize || 2;
+      var length = _this.getModuleCount();
+      for (var row = 0; row < length; row++) {
+        for (var col = 0; col < length; col++) {
+          context.fillStyle = _this.isDark(row, col) ? 'black' : 'white';
+          context.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrcode.stringToBytes
+  //---------------------------------------------------------------------
+
+  qrcode.stringToBytesFuncs = {
+    'default' : function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        bytes.push(c & 0xff);
+      }
+      return bytes;
+    }
+  };
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['default'];
+
+  //---------------------------------------------------------------------
+  // qrcode.createStringToBytes
+  //---------------------------------------------------------------------
+
+  /**
+   * @param unicodeData base64 string of byte array.
+   * [16bit Unicode],[16bit Bytes], ...
+   * @param numChars
+   */
+  qrcode.createStringToBytes = function(unicodeData, numChars) {
+
+    // create conversion map.
+
+    var unicodeMap = function() {
+
+      var bin = base64DecodeInputStream(unicodeData);
+      var read = function() {
+        var b = bin.read();
+        if (b == -1) throw 'eof';
+        return b;
+      };
+
+      var count = 0;
+      var unicodeMap = {};
+      while (true) {
+        var b0 = bin.read();
+        if (b0 == -1) break;
+        var b1 = read();
+        var b2 = read();
+        var b3 = read();
+        var k = String.fromCharCode( (b0 << 8) | b1);
+        var v = (b2 << 8) | b3;
+        unicodeMap[k] = v;
+        count += 1;
+      }
+      if (count != numChars) {
+        throw count + ' != ' + numChars;
+      }
+
+      return unicodeMap;
+    }();
+
+    var unknownChar = '?'.charCodeAt(0);
+
+    return function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        if (c < 128) {
+          bytes.push(c);
+        } else {
+          var b = unicodeMap[s.charAt(i)];
+          if (typeof b == 'number') {
+            if ( (b & 0xff) == b) {
+              // 1byte
+              bytes.push(b);
+            } else {
+              // 2bytes
+              bytes.push(b >>> 8);
+              bytes.push(b & 0xff);
+            }
+          } else {
+            bytes.push(unknownChar);
+          }
+        }
+      }
+      return bytes;
+    };
+  };
+
+  //---------------------------------------------------------------------
+  // QRMode
+  //---------------------------------------------------------------------
+
+  var QRMode = {
+    MODE_NUMBER :    1 << 0,
+    MODE_ALPHA_NUM : 1 << 1,
+    MODE_8BIT_BYTE : 1 << 2,
+    MODE_KANJI :     1 << 3
+  };
+
+  //---------------------------------------------------------------------
+  // QRErrorCorrectionLevel
+  //---------------------------------------------------------------------
+
+  var QRErrorCorrectionLevel = {
+    L : 1,
+    M : 0,
+    Q : 3,
+    H : 2
+  };
+
+  //---------------------------------------------------------------------
+  // QRMaskPattern
+  //---------------------------------------------------------------------
+
+  var QRMaskPattern = {
+    PATTERN000 : 0,
+    PATTERN001 : 1,
+    PATTERN010 : 2,
+    PATTERN011 : 3,
+    PATTERN100 : 4,
+    PATTERN101 : 5,
+    PATTERN110 : 6,
+    PATTERN111 : 7
+  };
+
+  //---------------------------------------------------------------------
+  // QRUtil
+  //---------------------------------------------------------------------
+
+  var QRUtil = function() {
+
+    var PATTERN_POSITION_TABLE = [
+      [],
+      [6, 18],
+      [6, 22],
+      [6, 26],
+      [6, 30],
+      [6, 34],
+      [6, 22, 38],
+      [6, 24, 42],
+      [6, 26, 46],
+      [6, 28, 50],
+      [6, 30, 54],
+      [6, 32, 58],
+      [6, 34, 62],
+      [6, 26, 46, 66],
+      [6, 26, 48, 70],
+      [6, 26, 50, 74],
+      [6, 30, 54, 78],
+      [6, 30, 56, 82],
+      [6, 30, 58, 86],
+      [6, 34, 62, 90],
+      [6, 28, 50, 72, 94],
+      [6, 26, 50, 74, 98],
+      [6, 30, 54, 78, 102],
+      [6, 28, 54, 80, 106],
+      [6, 32, 58, 84, 110],
+      [6, 30, 58, 86, 114],
+      [6, 34, 62, 90, 118],
+      [6, 26, 50, 74, 98, 122],
+      [6, 30, 54, 78, 102, 126],
+      [6, 26, 52, 78, 104, 130],
+      [6, 30, 56, 82, 108, 134],
+      [6, 34, 60, 86, 112, 138],
+      [6, 30, 58, 86, 114, 142],
+      [6, 34, 62, 90, 118, 146],
+      [6, 30, 54, 78, 102, 126, 150],
+      [6, 24, 50, 76, 102, 128, 154],
+      [6, 28, 54, 80, 106, 132, 158],
+      [6, 32, 58, 84, 110, 136, 162],
+      [6, 26, 54, 82, 110, 138, 166],
+      [6, 30, 58, 86, 114, 142, 170]
+    ];
+    var G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+    var G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+    var G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+    var _this = {};
+
+    var getBCHDigit = function(data) {
+      var digit = 0;
+      while (data != 0) {
+        digit += 1;
+        data >>>= 1;
+      }
+      return digit;
+    };
+
+    _this.getBCHTypeInfo = function(data) {
+      var d = data << 10;
+      while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+      }
+      return ( (data << 10) | d) ^ G15_MASK;
+    };
+
+    _this.getBCHTypeNumber = function(data) {
+      var d = data << 12;
+      while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+      }
+      return (data << 12) | d;
+    };
+
+    _this.getPatternPosition = function(typeNumber) {
+      return PATTERN_POSITION_TABLE[typeNumber - 1];
+    };
+
+    _this.getMaskFunction = function(maskPattern) {
+
+      switch (maskPattern) {
+
+      case QRMaskPattern.PATTERN000 :
+        return function(i, j) { return (i + j) % 2 == 0; };
+      case QRMaskPattern.PATTERN001 :
+        return function(i, j) { return i % 2 == 0; };
+      case QRMaskPattern.PATTERN010 :
+        return function(i, j) { return j % 3 == 0; };
+      case QRMaskPattern.PATTERN011 :
+        return function(i, j) { return (i + j) % 3 == 0; };
+      case QRMaskPattern.PATTERN100 :
+        return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+      case QRMaskPattern.PATTERN101 :
+        return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+      case QRMaskPattern.PATTERN110 :
+        return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+      case QRMaskPattern.PATTERN111 :
+        return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+
+      default :
+        throw 'bad maskPattern:' + maskPattern;
+      }
+    };
+
+    _this.getErrorCorrectPolynomial = function(errorCorrectLength) {
+      var a = qrPolynomial([1], 0);
+      for (var i = 0; i < errorCorrectLength; i += 1) {
+        a = a.multiply(qrPolynomial([1, QRMath.gexp(i)], 0) );
+      }
+      return a;
+    };
+
+    _this.getLengthInBits = function(mode, type) {
+
+      if (1 <= type && type < 10) {
+
+        // 1 - 9
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 10;
+        case QRMode.MODE_ALPHA_NUM : return 9;
+        case QRMode.MODE_8BIT_BYTE : return 8;
+        case QRMode.MODE_KANJI     : return 8;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 27) {
+
+        // 10 - 26
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 12;
+        case QRMode.MODE_ALPHA_NUM : return 11;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 10;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 41) {
+
+        // 27 - 40
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 14;
+        case QRMode.MODE_ALPHA_NUM : return 13;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 12;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else {
+        throw 'type:' + type;
+      }
+    };
+
+    _this.getLostPoint = function(qrcode) {
+
+      var moduleCount = qrcode.getModuleCount();
+
+      var lostPoint = 0;
+
+      // LEVEL1
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount; col += 1) {
+
+          var sameCount = 0;
+          var dark = qrcode.isDark(row, col);
+
+          for (var r = -1; r <= 1; r += 1) {
+
+            if (row + r < 0 || moduleCount <= row + r) {
+              continue;
+            }
+
+            for (var c = -1; c <= 1; c += 1) {
+
+              if (col + c < 0 || moduleCount <= col + c) {
+                continue;
+              }
+
+              if (r == 0 && c == 0) {
+                continue;
+              }
+
+              if (dark == qrcode.isDark(row + r, col + c) ) {
+                sameCount += 1;
+              }
+            }
+          }
+
+          if (sameCount > 5) {
+            lostPoint += (3 + sameCount - 5);
+          }
+        }
+      };
+
+      // LEVEL2
+
+      for (var row = 0; row < moduleCount - 1; row += 1) {
+        for (var col = 0; col < moduleCount - 1; col += 1) {
+          var count = 0;
+          if (qrcode.isDark(row, col) ) count += 1;
+          if (qrcode.isDark(row + 1, col) ) count += 1;
+          if (qrcode.isDark(row, col + 1) ) count += 1;
+          if (qrcode.isDark(row + 1, col + 1) ) count += 1;
+          if (count == 0 || count == 4) {
+            lostPoint += 3;
+          }
+        }
+      }
+
+      // LEVEL3
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount - 6; col += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row, col + 1)
+              &&  qrcode.isDark(row, col + 2)
+              &&  qrcode.isDark(row, col + 3)
+              &&  qrcode.isDark(row, col + 4)
+              && !qrcode.isDark(row, col + 5)
+              &&  qrcode.isDark(row, col + 6) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount - 6; row += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row + 1, col)
+              &&  qrcode.isDark(row + 2, col)
+              &&  qrcode.isDark(row + 3, col)
+              &&  qrcode.isDark(row + 4, col)
+              && !qrcode.isDark(row + 5, col)
+              &&  qrcode.isDark(row + 6, col) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      // LEVEL4
+
+      var darkCount = 0;
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount; row += 1) {
+          if (qrcode.isDark(row, col) ) {
+            darkCount += 1;
+          }
+        }
+      }
+
+      var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+      lostPoint += ratio * 10;
+
+      return lostPoint;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // QRMath
+  //---------------------------------------------------------------------
+
+  var QRMath = function() {
+
+    var EXP_TABLE = new Array(256);
+    var LOG_TABLE = new Array(256);
+
+    // initialize tables
+    for (var i = 0; i < 8; i += 1) {
+      EXP_TABLE[i] = 1 << i;
+    }
+    for (var i = 8; i < 256; i += 1) {
+      EXP_TABLE[i] = EXP_TABLE[i - 4]
+        ^ EXP_TABLE[i - 5]
+        ^ EXP_TABLE[i - 6]
+        ^ EXP_TABLE[i - 8];
+    }
+    for (var i = 0; i < 255; i += 1) {
+      LOG_TABLE[EXP_TABLE[i] ] = i;
+    }
+
+    var _this = {};
+
+    _this.glog = function(n) {
+
+      if (n < 1) {
+        throw 'glog(' + n + ')';
+      }
+
+      return LOG_TABLE[n];
+    };
+
+    _this.gexp = function(n) {
+
+      while (n < 0) {
+        n += 255;
+      }
+
+      while (n >= 256) {
+        n -= 255;
+      }
+
+      return EXP_TABLE[n];
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrPolynomial
+  //---------------------------------------------------------------------
+
+  function qrPolynomial(num, shift) {
+
+    if (typeof num.length == 'undefined') {
+      throw num.length + '/' + shift;
+    }
+
+    var _num = function() {
+      var offset = 0;
+      while (offset < num.length && num[offset] == 0) {
+        offset += 1;
+      }
+      var _num = new Array(num.length - offset + shift);
+      for (var i = 0; i < num.length - offset; i += 1) {
+        _num[i] = num[i + offset];
+      }
+      return _num;
+    }();
+
+    var _this = {};
+
+    _this.getAt = function(index) {
+      return _num[index];
+    };
+
+    _this.getLength = function() {
+      return _num.length;
+    };
+
+    _this.multiply = function(e) {
+
+      var num = new Array(_this.getLength() + e.getLength() - 1);
+
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        for (var j = 0; j < e.getLength(); j += 1) {
+          num[i + j] ^= QRMath.gexp(QRMath.glog(_this.getAt(i) ) + QRMath.glog(e.getAt(j) ) );
+        }
+      }
+
+      return qrPolynomial(num, 0);
+    };
+
+    _this.mod = function(e) {
+
+      if (_this.getLength() - e.getLength() < 0) {
+        return _this;
+      }
+
+      var ratio = QRMath.glog(_this.getAt(0) ) - QRMath.glog(e.getAt(0) );
+
+      var num = new Array(_this.getLength() );
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        num[i] = _this.getAt(i);
+      }
+
+      for (var i = 0; i < e.getLength(); i += 1) {
+        num[i] ^= QRMath.gexp(QRMath.glog(e.getAt(i) ) + ratio);
+      }
+
+      // recursive call
+      return qrPolynomial(num, 0).mod(e);
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // QRRSBlock
+  //---------------------------------------------------------------------
+
+  var QRRSBlock = function() {
+
+    var RS_BLOCK_TABLE = [
+
+      // L
+      // M
+      // Q
+      // H
+
+      // 1
+      [1, 26, 19],
+      [1, 26, 16],
+      [1, 26, 13],
+      [1, 26, 9],
+
+      // 2
+      [1, 44, 34],
+      [1, 44, 28],
+      [1, 44, 22],
+      [1, 44, 16],
+
+      // 3
+      [1, 70, 55],
+      [1, 70, 44],
+      [2, 35, 17],
+      [2, 35, 13],
+
+      // 4
+      [1, 100, 80],
+      [2, 50, 32],
+      [2, 50, 24],
+      [4, 25, 9],
+
+      // 5
+      [1, 134, 108],
+      [2, 67, 43],
+      [2, 33, 15, 2, 34, 16],
+      [2, 33, 11, 2, 34, 12],
+
+      // 6
+      [2, 86, 68],
+      [4, 43, 27],
+      [4, 43, 19],
+      [4, 43, 15],
+
+      // 7
+      [2, 98, 78],
+      [4, 49, 31],
+      [2, 32, 14, 4, 33, 15],
+      [4, 39, 13, 1, 40, 14],
+
+      // 8
+      [2, 121, 97],
+      [2, 60, 38, 2, 61, 39],
+      [4, 40, 18, 2, 41, 19],
+      [4, 40, 14, 2, 41, 15],
+
+      // 9
+      [2, 146, 116],
+      [3, 58, 36, 2, 59, 37],
+      [4, 36, 16, 4, 37, 17],
+      [4, 36, 12, 4, 37, 13],
+
+      // 10
+      [2, 86, 68, 2, 87, 69],
+      [4, 69, 43, 1, 70, 44],
+      [6, 43, 19, 2, 44, 20],
+      [6, 43, 15, 2, 44, 16],
+
+      // 11
+      [4, 101, 81],
+      [1, 80, 50, 4, 81, 51],
+      [4, 50, 22, 4, 51, 23],
+      [3, 36, 12, 8, 37, 13],
+
+      // 12
+      [2, 116, 92, 2, 117, 93],
+      [6, 58, 36, 2, 59, 37],
+      [4, 46, 20, 6, 47, 21],
+      [7, 42, 14, 4, 43, 15],
+
+      // 13
+      [4, 133, 107],
+      [8, 59, 37, 1, 60, 38],
+      [8, 44, 20, 4, 45, 21],
+      [12, 33, 11, 4, 34, 12],
+
+      // 14
+      [3, 145, 115, 1, 146, 116],
+      [4, 64, 40, 5, 65, 41],
+      [11, 36, 16, 5, 37, 17],
+      [11, 36, 12, 5, 37, 13],
+
+      // 15
+      [5, 109, 87, 1, 110, 88],
+      [5, 65, 41, 5, 66, 42],
+      [5, 54, 24, 7, 55, 25],
+      [11, 36, 12, 7, 37, 13],
+
+      // 16
+      [5, 122, 98, 1, 123, 99],
+      [7, 73, 45, 3, 74, 46],
+      [15, 43, 19, 2, 44, 20],
+      [3, 45, 15, 13, 46, 16],
+
+      // 17
+      [1, 135, 107, 5, 136, 108],
+      [10, 74, 46, 1, 75, 47],
+      [1, 50, 22, 15, 51, 23],
+      [2, 42, 14, 17, 43, 15],
+
+      // 18
+      [5, 150, 120, 1, 151, 121],
+      [9, 69, 43, 4, 70, 44],
+      [17, 50, 22, 1, 51, 23],
+      [2, 42, 14, 19, 43, 15],
+
+      // 19
+      [3, 141, 113, 4, 142, 114],
+      [3, 70, 44, 11, 71, 45],
+      [17, 47, 21, 4, 48, 22],
+      [9, 39, 13, 16, 40, 14],
+
+      // 20
+      [3, 135, 107, 5, 136, 108],
+      [3, 67, 41, 13, 68, 42],
+      [15, 54, 24, 5, 55, 25],
+      [15, 43, 15, 10, 44, 16],
+
+      // 21
+      [4, 144, 116, 4, 145, 117],
+      [17, 68, 42],
+      [17, 50, 22, 6, 51, 23],
+      [19, 46, 16, 6, 47, 17],
+
+      // 22
+      [2, 139, 111, 7, 140, 112],
+      [17, 74, 46],
+      [7, 54, 24, 16, 55, 25],
+      [34, 37, 13],
+
+      // 23
+      [4, 151, 121, 5, 152, 122],
+      [4, 75, 47, 14, 76, 48],
+      [11, 54, 24, 14, 55, 25],
+      [16, 45, 15, 14, 46, 16],
+
+      // 24
+      [6, 147, 117, 4, 148, 118],
+      [6, 73, 45, 14, 74, 46],
+      [11, 54, 24, 16, 55, 25],
+      [30, 46, 16, 2, 47, 17],
+
+      // 25
+      [8, 132, 106, 4, 133, 107],
+      [8, 75, 47, 13, 76, 48],
+      [7, 54, 24, 22, 55, 25],
+      [22, 45, 15, 13, 46, 16],
+
+      // 26
+      [10, 142, 114, 2, 143, 115],
+      [19, 74, 46, 4, 75, 47],
+      [28, 50, 22, 6, 51, 23],
+      [33, 46, 16, 4, 47, 17],
+
+      // 27
+      [8, 152, 122, 4, 153, 123],
+      [22, 73, 45, 3, 74, 46],
+      [8, 53, 23, 26, 54, 24],
+      [12, 45, 15, 28, 46, 16],
+
+      // 28
+      [3, 147, 117, 10, 148, 118],
+      [3, 73, 45, 23, 74, 46],
+      [4, 54, 24, 31, 55, 25],
+      [11, 45, 15, 31, 46, 16],
+
+      // 29
+      [7, 146, 116, 7, 147, 117],
+      [21, 73, 45, 7, 74, 46],
+      [1, 53, 23, 37, 54, 24],
+      [19, 45, 15, 26, 46, 16],
+
+      // 30
+      [5, 145, 115, 10, 146, 116],
+      [19, 75, 47, 10, 76, 48],
+      [15, 54, 24, 25, 55, 25],
+      [23, 45, 15, 25, 46, 16],
+
+      // 31
+      [13, 145, 115, 3, 146, 116],
+      [2, 74, 46, 29, 75, 47],
+      [42, 54, 24, 1, 55, 25],
+      [23, 45, 15, 28, 46, 16],
+
+      // 32
+      [17, 145, 115],
+      [10, 74, 46, 23, 75, 47],
+      [10, 54, 24, 35, 55, 25],
+      [19, 45, 15, 35, 46, 16],
+
+      // 33
+      [17, 145, 115, 1, 146, 116],
+      [14, 74, 46, 21, 75, 47],
+      [29, 54, 24, 19, 55, 25],
+      [11, 45, 15, 46, 46, 16],
+
+      // 34
+      [13, 145, 115, 6, 146, 116],
+      [14, 74, 46, 23, 75, 47],
+      [44, 54, 24, 7, 55, 25],
+      [59, 46, 16, 1, 47, 17],
+
+      // 35
+      [12, 151, 121, 7, 152, 122],
+      [12, 75, 47, 26, 76, 48],
+      [39, 54, 24, 14, 55, 25],
+      [22, 45, 15, 41, 46, 16],
+
+      // 36
+      [6, 151, 121, 14, 152, 122],
+      [6, 75, 47, 34, 76, 48],
+      [46, 54, 24, 10, 55, 25],
+      [2, 45, 15, 64, 46, 16],
+
+      // 37
+      [17, 152, 122, 4, 153, 123],
+      [29, 74, 46, 14, 75, 47],
+      [49, 54, 24, 10, 55, 25],
+      [24, 45, 15, 46, 46, 16],
+
+      // 38
+      [4, 152, 122, 18, 153, 123],
+      [13, 74, 46, 32, 75, 47],
+      [48, 54, 24, 14, 55, 25],
+      [42, 45, 15, 32, 46, 16],
+
+      // 39
+      [20, 147, 117, 4, 148, 118],
+      [40, 75, 47, 7, 76, 48],
+      [43, 54, 24, 22, 55, 25],
+      [10, 45, 15, 67, 46, 16],
+
+      // 40
+      [19, 148, 118, 6, 149, 119],
+      [18, 75, 47, 31, 76, 48],
+      [34, 54, 24, 34, 55, 25],
+      [20, 45, 15, 61, 46, 16]
+    ];
+
+    var qrRSBlock = function(totalCount, dataCount) {
+      var _this = {};
+      _this.totalCount = totalCount;
+      _this.dataCount = dataCount;
+      return _this;
+    };
+
+    var _this = {};
+
+    var getRsBlockTable = function(typeNumber, errorCorrectionLevel) {
+
+      switch(errorCorrectionLevel) {
+      case QRErrorCorrectionLevel.L :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+      case QRErrorCorrectionLevel.M :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+      case QRErrorCorrectionLevel.Q :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+      case QRErrorCorrectionLevel.H :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+      default :
+        return undefined;
+      }
+    };
+
+    _this.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+
+      var rsBlock = getRsBlockTable(typeNumber, errorCorrectionLevel);
+
+      if (typeof rsBlock == 'undefined') {
+        throw 'bad rs block @ typeNumber:' + typeNumber +
+            '/errorCorrectionLevel:' + errorCorrectionLevel;
+      }
+
+      var length = rsBlock.length / 3;
+
+      var list = [];
+
+      for (var i = 0; i < length; i += 1) {
+
+        var count = rsBlock[i * 3 + 0];
+        var totalCount = rsBlock[i * 3 + 1];
+        var dataCount = rsBlock[i * 3 + 2];
+
+        for (var j = 0; j < count; j += 1) {
+          list.push(qrRSBlock(totalCount, dataCount) );
+        }
+      }
+
+      return list;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrBitBuffer
+  //---------------------------------------------------------------------
+
+  var qrBitBuffer = function() {
+
+    var _buffer = [];
+    var _length = 0;
+
+    var _this = {};
+
+    _this.getBuffer = function() {
+      return _buffer;
+    };
+
+    _this.getAt = function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ( (_buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+    };
+
+    _this.put = function(num, length) {
+      for (var i = 0; i < length; i += 1) {
+        _this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+      }
+    };
+
+    _this.getLengthInBits = function() {
+      return _length;
+    };
+
+    _this.putBit = function(bit) {
+
+      var bufIndex = Math.floor(_length / 8);
+      if (_buffer.length <= bufIndex) {
+        _buffer.push(0);
+      }
+
+      if (bit) {
+        _buffer[bufIndex] |= (0x80 >>> (_length % 8) );
+      }
+
+      _length += 1;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrNumber
+  //---------------------------------------------------------------------
+
+  var qrNumber = function(data) {
+
+    var _mode = QRMode.MODE_NUMBER;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _data;
+
+      var i = 0;
+
+      while (i + 2 < data.length) {
+        buffer.put(strToNum(data.substring(i, i + 3) ), 10);
+        i += 3;
+      }
+
+      if (i < data.length) {
+        if (data.length - i == 1) {
+          buffer.put(strToNum(data.substring(i, i + 1) ), 4);
+        } else if (data.length - i == 2) {
+          buffer.put(strToNum(data.substring(i, i + 2) ), 7);
+        }
+      }
+    };
+
+    var strToNum = function(s) {
+      var num = 0;
+      for (var i = 0; i < s.length; i += 1) {
+        num = num * 10 + chatToNum(s.charAt(i) );
+      }
+      return num;
+    };
+
+    var chatToNum = function(c) {
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      }
+      throw 'illegal char :' + c;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrAlphaNum
+  //---------------------------------------------------------------------
+
+  var qrAlphaNum = function(data) {
+
+    var _mode = QRMode.MODE_ALPHA_NUM;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var s = _data;
+
+      var i = 0;
+
+      while (i + 1 < s.length) {
+        buffer.put(
+          getCode(s.charAt(i) ) * 45 +
+          getCode(s.charAt(i + 1) ), 11);
+        i += 2;
+      }
+
+      if (i < s.length) {
+        buffer.put(getCode(s.charAt(i) ), 6);
+      }
+    };
+
+    var getCode = function(c) {
+
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      } else if ('A' <= c && c <= 'Z') {
+        return c.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else {
+        switch (c) {
+        case ' ' : return 36;
+        case '$' : return 37;
+        case '%' : return 38;
+        case '*' : return 39;
+        case '+' : return 40;
+        case '-' : return 41;
+        case '.' : return 42;
+        case '/' : return 43;
+        case ':' : return 44;
+        default :
+          throw 'illegal char :' + c;
+        }
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qr8BitByte
+  //---------------------------------------------------------------------
+
+  var qr8BitByte = function(data) {
+
+    var _mode = QRMode.MODE_8BIT_BYTE;
+    var _data = data;
+    var _bytes = qrcode.stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _bytes.length;
+    };
+
+    _this.write = function(buffer) {
+      for (var i = 0; i < _bytes.length; i += 1) {
+        buffer.put(_bytes[i], 8);
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrKanji
+  //---------------------------------------------------------------------
+
+  var qrKanji = function(data) {
+
+    var _mode = QRMode.MODE_KANJI;
+    var _data = data;
+
+    var stringToBytes = qrcode.stringToBytesFuncs['SJIS'];
+    if (!stringToBytes) {
+      throw 'sjis not supported.';
+    }
+    !function(c, code) {
+      // self test for sjis support.
+      var test = stringToBytes(c);
+      if (test.length != 2 || ( (test[0] << 8) | test[1]) != code) {
+        throw 'sjis not supported.';
+      }
+    }('\u53cb', 0x9746);
+
+    var _bytes = stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return ~~(_bytes.length / 2);
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _bytes;
+
+      var i = 0;
+
+      while (i + 1 < data.length) {
+
+        var c = ( (0xff & data[i]) << 8) | (0xff & data[i + 1]);
+
+        if (0x8140 <= c && c <= 0x9FFC) {
+          c -= 0x8140;
+        } else if (0xE040 <= c && c <= 0xEBBF) {
+          c -= 0xC140;
+        } else {
+          throw 'illegal char at ' + (i + 1) + '/' + c;
+        }
+
+        c = ( (c >>> 8) & 0xff) * 0xC0 + (c & 0xff);
+
+        buffer.put(c, 13);
+
+        i += 2;
+      }
+
+      if (i < data.length) {
+        throw 'illegal char at ' + (i + 1);
+      }
+    };
+
+    return _this;
+  };
+
+  //=====================================================================
+  // GIF Support etc.
+  //
+
+  //---------------------------------------------------------------------
+  // byteArrayOutputStream
+  //---------------------------------------------------------------------
+
+  var byteArrayOutputStream = function() {
+
+    var _bytes = [];
+
+    var _this = {};
+
+    _this.writeByte = function(b) {
+      _bytes.push(b & 0xff);
+    };
+
+    _this.writeShort = function(i) {
+      _this.writeByte(i);
+      _this.writeByte(i >>> 8);
+    };
+
+    _this.writeBytes = function(b, off, len) {
+      off = off || 0;
+      len = len || b.length;
+      for (var i = 0; i < len; i += 1) {
+        _this.writeByte(b[i + off]);
+      }
+    };
+
+    _this.writeString = function(s) {
+      for (var i = 0; i < s.length; i += 1) {
+        _this.writeByte(s.charCodeAt(i) );
+      }
+    };
+
+    _this.toByteArray = function() {
+      return _bytes;
+    };
+
+    _this.toString = function() {
+      var s = '';
+      s += '[';
+      for (var i = 0; i < _bytes.length; i += 1) {
+        if (i > 0) {
+          s += ',';
+        }
+        s += _bytes[i];
+      }
+      s += ']';
+      return s;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64EncodeOutputStream
+  //---------------------------------------------------------------------
+
+  var base64EncodeOutputStream = function() {
+
+    var _buffer = 0;
+    var _buflen = 0;
+    var _length = 0;
+    var _base64 = '';
+
+    var _this = {};
+
+    var writeEncoded = function(b) {
+      _base64 += String.fromCharCode(encode(b & 0x3f) );
+    };
+
+    var encode = function(n) {
+      if (n < 0) {
+        // error.
+      } else if (n < 26) {
+        return 0x41 + n;
+      } else if (n < 52) {
+        return 0x61 + (n - 26);
+      } else if (n < 62) {
+        return 0x30 + (n - 52);
+      } else if (n == 62) {
+        return 0x2b;
+      } else if (n == 63) {
+        return 0x2f;
+      }
+      throw 'n:' + n;
+    };
+
+    _this.writeByte = function(n) {
+
+      _buffer = (_buffer << 8) | (n & 0xff);
+      _buflen += 8;
+      _length += 1;
+
+      while (_buflen >= 6) {
+        writeEncoded(_buffer >>> (_buflen - 6) );
+        _buflen -= 6;
+      }
+    };
+
+    _this.flush = function() {
+
+      if (_buflen > 0) {
+        writeEncoded(_buffer << (6 - _buflen) );
+        _buffer = 0;
+        _buflen = 0;
+      }
+
+      if (_length % 3 != 0) {
+        // padding
+        var padlen = 3 - _length % 3;
+        for (var i = 0; i < padlen; i += 1) {
+          _base64 += '=';
+        }
+      }
+    };
+
+    _this.toString = function() {
+      return _base64;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64DecodeInputStream
+  //---------------------------------------------------------------------
+
+  var base64DecodeInputStream = function(str) {
+
+    var _str = str;
+    var _pos = 0;
+    var _buffer = 0;
+    var _buflen = 0;
+
+    var _this = {};
+
+    _this.read = function() {
+
+      while (_buflen < 8) {
+
+        if (_pos >= _str.length) {
+          if (_buflen == 0) {
+            return -1;
+          }
+          throw 'unexpected end of file./' + _buflen;
+        }
+
+        var c = _str.charAt(_pos);
+        _pos += 1;
+
+        if (c == '=') {
+          _buflen = 0;
+          return -1;
+        } else if (c.match(/^\s$/) ) {
+          // ignore if whitespace.
+          continue;
+        }
+
+        _buffer = (_buffer << 6) | decode(c.charCodeAt(0) );
+        _buflen += 6;
+      }
+
+      var n = (_buffer >>> (_buflen - 8) ) & 0xff;
+      _buflen -= 8;
+      return n;
+    };
+
+    var decode = function(c) {
+      if (0x41 <= c && c <= 0x5a) {
+        return c - 0x41;
+      } else if (0x61 <= c && c <= 0x7a) {
+        return c - 0x61 + 26;
+      } else if (0x30 <= c && c <= 0x39) {
+        return c - 0x30 + 52;
+      } else if (c == 0x2b) {
+        return 62;
+      } else if (c == 0x2f) {
+        return 63;
+      } else {
+        throw 'c:' + c;
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // gifImage (B/W)
+  //---------------------------------------------------------------------
+
+  var gifImage = function(width, height) {
+
+    var _width = width;
+    var _height = height;
+    var _data = new Array(width * height);
+
+    var _this = {};
+
+    _this.setPixel = function(x, y, pixel) {
+      _data[y * _width + x] = pixel;
+    };
+
+    _this.write = function(out) {
+
+      //---------------------------------
+      // GIF Signature
+
+      out.writeString('GIF87a');
+
+      //---------------------------------
+      // Screen Descriptor
+
+      out.writeShort(_width);
+      out.writeShort(_height);
+
+      out.writeByte(0x80); // 2bit
+      out.writeByte(0);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Global Color Map
+
+      // black
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+
+      // white
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+
+      //---------------------------------
+      // Image Descriptor
+
+      out.writeString(',');
+      out.writeShort(0);
+      out.writeShort(0);
+      out.writeShort(_width);
+      out.writeShort(_height);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Local Color Map
+
+      //---------------------------------
+      // Raster Data
+
+      var lzwMinCodeSize = 2;
+      var raster = getLZWRaster(lzwMinCodeSize);
+
+      out.writeByte(lzwMinCodeSize);
+
+      var offset = 0;
+
+      while (raster.length - offset > 255) {
+        out.writeByte(255);
+        out.writeBytes(raster, offset, 255);
+        offset += 255;
+      }
+
+      out.writeByte(raster.length - offset);
+      out.writeBytes(raster, offset, raster.length - offset);
+      out.writeByte(0x00);
+
+      //---------------------------------
+      // GIF Terminator
+      out.writeString(';');
+    };
+
+    var bitOutputStream = function(out) {
+
+      var _out = out;
+      var _bitLength = 0;
+      var _bitBuffer = 0;
+
+      var _this = {};
+
+      _this.write = function(data, length) {
+
+        if ( (data >>> length) != 0) {
+          throw 'length over';
+        }
+
+        while (_bitLength + length >= 8) {
+          _out.writeByte(0xff & ( (data << _bitLength) | _bitBuffer) );
+          length -= (8 - _bitLength);
+          data >>>= (8 - _bitLength);
+          _bitBuffer = 0;
+          _bitLength = 0;
+        }
+
+        _bitBuffer = (data << _bitLength) | _bitBuffer;
+        _bitLength = _bitLength + length;
+      };
+
+      _this.flush = function() {
+        if (_bitLength > 0) {
+          _out.writeByte(_bitBuffer);
+        }
+      };
+
+      return _this;
+    };
+
+    var getLZWRaster = function(lzwMinCodeSize) {
+
+      var clearCode = 1 << lzwMinCodeSize;
+      var endCode = (1 << lzwMinCodeSize) + 1;
+      var bitLength = lzwMinCodeSize + 1;
+
+      // Setup LZWTable
+      var table = lzwTable();
+
+      for (var i = 0; i < clearCode; i += 1) {
+        table.add(String.fromCharCode(i) );
+      }
+      table.add(String.fromCharCode(clearCode) );
+      table.add(String.fromCharCode(endCode) );
+
+      var byteOut = byteArrayOutputStream();
+      var bitOut = bitOutputStream(byteOut);
+
+      // clear code
+      bitOut.write(clearCode, bitLength);
+
+      var dataIndex = 0;
+
+      var s = String.fromCharCode(_data[dataIndex]);
+      dataIndex += 1;
+
+      while (dataIndex < _data.length) {
+
+        var c = String.fromCharCode(_data[dataIndex]);
+        dataIndex += 1;
+
+        if (table.contains(s + c) ) {
+
+          s = s + c;
+
+        } else {
+
+          bitOut.write(table.indexOf(s), bitLength);
+
+          if (table.size() < 0xfff) {
+
+            if (table.size() == (1 << bitLength) ) {
+              bitLength += 1;
+            }
+
+            table.add(s + c);
+          }
+
+          s = c;
+        }
+      }
+
+      bitOut.write(table.indexOf(s), bitLength);
+
+      // end code
+      bitOut.write(endCode, bitLength);
+
+      bitOut.flush();
+
+      return byteOut.toByteArray();
+    };
+
+    var lzwTable = function() {
+
+      var _map = {};
+      var _size = 0;
+
+      var _this = {};
+
+      _this.add = function(key) {
+        if (_this.contains(key) ) {
+          throw 'dup key:' + key;
+        }
+        _map[key] = _size;
+        _size += 1;
+      };
+
+      _this.size = function() {
+        return _size;
+      };
+
+      _this.indexOf = function(key) {
+        return _map[key];
+      };
+
+      _this.contains = function(key) {
+        return typeof _map[key] != 'undefined';
+      };
+
+      return _this;
+    };
+
+    return _this;
+  };
+
+  var createDataURL = function(width, height, getPixel) {
+    var gif = gifImage(width, height);
+    for (var y = 0; y < height; y += 1) {
+      for (var x = 0; x < width; x += 1) {
+        gif.setPixel(x, y, getPixel(x, y) );
+      }
+    }
+
+    var b = byteArrayOutputStream();
+    gif.write(b);
+
+    var base64 = base64EncodeOutputStream();
+    var bytes = b.toByteArray();
+    for (var i = 0; i < bytes.length; i += 1) {
+      base64.writeByte(bytes[i]);
+    }
+    base64.flush();
+
+    return 'data:image/gif;base64,' + base64;
+  };
+
+  //---------------------------------------------------------------------
+  // returns qrcode function.
+
+  return qrcode;
+}();
+
+// multibyte support
+!function() {
+
+  qrcode.stringToBytesFuncs['UTF-8'] = function(s) {
+    // http://stackoverflow.com/questions/18729405/how-to-convert-utf8-string-to-byte-array
+    function toUTF8Array(str) {
+      var utf8 = [];
+      for (var i=0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6),
+              0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+          i++;
+          // UTF-16 encodes 0x10000-0x10FFFF by
+          // subtracting 0x10000 and splitting the
+          // 20 bits of 0x0-0xFFFFF into two halves
+          charcode = 0x10000 + (((charcode & 0x3ff)<<10)
+            | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(0xf0 | (charcode >>18),
+              0x80 | ((charcode>>12) & 0x3f),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+      }
+      return utf8;
+    }
+    return toUTF8Array(s);
+  };
+
+}();
+
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+      define([], factory);
+  } else if (typeof exports === 'object') {
+      module.exports = factory();
+  }
+}(function () {
+    return qrcode;
+}));
+/* ---- end vendored QR encoder ---- */
+</script>
+<script>
+/* Rollworthy app — (c) 2026 Enlightened Global Solutions. All rights reserved. */
+(function(){
+'use strict';
+
+/* ---------- constants & defaults ---------- */
+var LS_CFG='ft_cfg', LS_REC='ft_records', LS_RES='ft_res', LS_DRIVER='ft_driver', LS_NUDGE='ft_nudge';
+var DB_NAME='fleettracer', DB_STORE='photos'; /* internal names — never rename */
+
+var DEFAULT_LIGHT=['Walkaround — body damage','Tires — tread, pressure, damage','Lights & signals','Windshield, mirrors & glass','Wipers & washer fluid','Engine oil level','Coolant level','Brakes & parking brake','Horn','Seatbelts','Interior cleanliness','Safety equipment — first aid, extinguisher, triangles','Registration & insurance in vehicle'];
+var DEFAULT_NSC=['Air brake system','Cab & body exterior','Cargo securement','Coupling devices','Driver controls','Driver seat & seatbelt','Emergency equipment & safety devices','Exhaust system','Frame & cargo body','Fuel system','General — leaks, damage','Glass & mirrors','Heater / defroster','Horn','Hydraulic brake system','Lamps & reflectors','Steering','Suspension','Tires','Wheels, hubs & fasteners','Windshield wiper / washer'];
+var DEFAULT_IN=['New damage since checkout','Warning lights on dash','Interior condition','Defects noticed during operation'];
+var FUELS=['E','¼','½','¾','F'];
+
+var INFO={
+  odo:'Enter the number shown on the dashboard odometer. A photo of the odometer proves the reading and protects you.',
+  fuel:'Tap the button closest to the fuel gauge needle.',
+  items:'Tap OK if the item checks out. Tap Defect if something is wrong — you will be asked for a note and a photo.',
+  nsc:'Commercial vehicles follow NSC Standard 13. A MINOR defect must be reported; a MAJOR defect means the vehicle must not be operated until repaired.',
+  share:'Your records live only on this phone until you share them. Use Share to send them to your manager.',
+  mgr:'Manager tools are protected by the company PIN set during setup.',
+  stickers:'Print these and tape one to each dash. Drivers scan the code to open that vehicle instantly.',
+  setupfile:'The setup file carries your company, vehicles, drivers and checklists to each driver phone. It never includes the manager PIN or any records.'
+};
+
+/* ---------- state ---------- */
+var cfg=null, records=[], resolutions={}, view={name:'home'}, draft=null, scanStream=null, scanTimer=null, photoTarget=null, importMode=null;
+
+function loadAll(){
+  try{cfg=JSON.parse(localStorage.getItem(LS_CFG)||'null');}catch(e){cfg=null;}
+  try{records=JSON.parse(localStorage.getItem(LS_REC)||'[]');}catch(e){records=[];}
+  try{resolutions=JSON.parse(localStorage.getItem(LS_RES)||'{}');}catch(e){resolutions={};}
+}
+function saveCfg(){localStorage.setItem(LS_CFG,JSON.stringify(cfg));}
+function saveRecords(){localStorage.setItem(LS_REC,JSON.stringify(records));}
+function saveRes(){localStorage.setItem(LS_RES,JSON.stringify(resolutions));}
+
+/* ---------- helpers ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function uid(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);}
+function fmtDT(ts){var d=new Date(ts);return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
+function todayStr(){var d=new Date();return d.toISOString().slice(0,10);}
+function vehById(id){for(var i=0;i<cfg.vehicles.length;i++)if(cfg.vehicles[i].id===id)return cfg.vehicles[i];return null;}
+function checklistFor(v,type){
+  if(type==='in')return cfg.checklist.checkin.slice();
+  return (v.cls==='nsc'?cfg.checklist.nsc:cfg.checklist.light).slice();
+}
+function lastOdo(vehicleId){
+  var best=null;
+  for(var i=0;i<records.length;i++){var r=records[i];
+    if(r.vehicleId===vehicleId && typeof r.odometer==='number'){if(!best||r.ts>best.ts)best=r;}}
+  return best?best.odometer:null;
+}
+function openDefects(){
+  var out=[];
+  records.forEach(function(r){(r.items||[]).forEach(function(it,idx){
+    if(it.status&&it.status!=='ok'){var key=r.id+'|'+idx;
+      out.push({key:key,rec:r,item:it,idx:idx,resolved:!!resolutions[key]});}
+  });});
+  out.sort(function(a,b){return b.rec.ts-a.rec.ts;});
+  return out;
+}
+
+/* ---------- IndexedDB photos ---------- */
+var dbP=null;
+function db(){
+  if(dbP)return dbP;
+  dbP=new Promise(function(res,rej){
+    var q=indexedDB.open(DB_NAME,1);
+    q.onupgradeneeded=function(){q.result.createObjectStore(DB_STORE);};
+    q.onsuccess=function(){res(q.result);};
+    q.onerror=function(){rej(q.error);};
+  });
+  return dbP;
+}
+function putPhoto(id,blob){return db().then(function(d){return new Promise(function(res,rej){
+  var tx=d.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(blob,id);
+  tx.oncomplete=function(){res();};tx.onerror=function(){rej(tx.error);};});});}
+function getPhoto(id){return db().then(function(d){return new Promise(function(res){
+  var q=d.transaction(DB_STORE).objectStore(DB_STORE).get(id);
+  q.onsuccess=function(){res(q.result||null);};q.onerror=function(){res(null);};});});}
+function downscale(file){
+  return new Promise(function(res){
+    var img=new Image();
+    img.onload=function(){
+      var max=1000,w=img.width,h=img.height;
+      if(w>max||h>max){var k=max/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k);}
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(function(b){URL.revokeObjectURL(img.src);res(b);},'image/jpeg',0.8);
+    };
+    img.onerror=function(){res(null);};
+    img.src=URL.createObjectURL(file);
+  });
+}
+function blobToDataURL(b){return new Promise(function(res){var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=function(){res(null);};r.readAsDataURL(b);});}
+function dataURLtoBlob(u){
+  try{var p=u.split(','),m=p[0].match(/:(.*?);/)[1],bin=atob(p[1]),a=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:m});}catch(e){return null;}
+}
+function hydrateThumbs(){
+  var els=document.querySelectorAll('img[data-photo]');
+  Array.prototype.forEach.call(els,function(el){
+    getPhoto(el.getAttribute('data-photo')).then(function(b){
+      if(b)el.src=URL.createObjectURL(b);
+    });
+  });
+}
+
+/* ---------- rendering ---------- */
+function h(html){document.getElementById('app').innerHTML=html;window.scrollTo(0,0);hydrateThumbs();}
+function header(title,sub,back){
+  return '<header class="app">'+
+    (back?'<button class="hbtn" data-action="'+esc(back)+'">‹</button>':'')+
+    '<h1>'+esc(title)+(sub?'<small>'+esc(sub)+'</small>':'')+'</h1>'+
+    (view.name==='home'?'<button class="hbtn" data-action="openMenu">☰</button>':'')+
+  '</header>';
+}
+function infoI(key){return '<button class="info-i" data-action="showInfo" data-info="'+esc(key)+'">i</button>';}
+function applyTheme(){
+  var t=(cfg&&cfg.settings&&cfg.settings.theme)||'system';
+  var dark = t==='dark' || (t==='system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  document.body.classList.toggle('expert', !!(cfg&&cfg.settings&&!cfg.settings.beginner));
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+
+/* ---------- views ---------- */
+function render(){
+  applyTheme();
+  if(!cfg){
+    if(view.name==='setup')renderSetup();
+    else renderFirstRun();
+    return;
+  }
+  switch(view.name){
+    case 'setup': renderSetup(); break;
+    case 'pick': renderPick(); break;
+    case 'inspect': renderInspect(); break;
+    case 'done': renderDone(); break;
+    case 'recDetail': renderRecDetail(); break;
+    case 'manager': renderManager(); break;
+    case 'privacy': renderPrivacy(); break;
+    default: renderHome();
+  }
+  maybeNudge();
+}
+
+function renderFirstRun(){
+  h('<main class="stack">'+
+    '<div class="card center"><h2>Rollworthy</h2><p class="muted">Vehicle check-out &amp; inspection records.<br>Private. On-device. By EGS 🍁</p></div>'+
+    '<div class="card stack">'+
+      '<button class="big out" data-action="startSetup">Set up a new company</button>'+
+      '<button class="big in" data-action="importSetup">Import company setup file</button>'+
+      '<p class="muted center">Managers set up a new company. Drivers import the setup file their manager shares with them.</p>'+
+    '</div>'+
+  '</main>');
+}
+
+function renderSetup(){
+  var s=view.step||1;
+  var body='';
+  if(s===1){
+    body='<div class="card stack"><h2>Step 1 — Company</h2>'+
+    '<label class="f">Company name</label><input type="text" id="su_company" value="'+esc(view.tmp&&view.tmp.company||'')+'">'+
+    '<label class="f">Manager PIN (4+ digits — protects manager tools)</label><input type="password" id="su_pin" inputmode="numeric" value="">'+
+    '<button class="btn primary" data-action="setupNext1">Next</button></div>';
+  }else if(s===2){
+    var rows=(view.tmp.vehicles||[]).map(function(v,i){
+      return '<div class="vrow"><span class="unit">'+esc(v.unit)+'</span><span style="flex:1">'+esc(v.desc||'')+'<div class="sub">'+esc(v.plate||'')+'</div></span>'+
+      (v.cls==='nsc'?'<span class="tag">NSC 13</span>':'')+
+      '<button class="btn small danger" data-action="setupDelVeh" data-i="'+i+'">✕</button></div>';
+    }).join('');
+    body='<div class="card"><h2>Step 2 — Vehicles</h2>'+(rows||'<p class="muted">No vehicles yet.</p>')+'</div>'+
+    '<div class="card stack"><h3>Add vehicle</h3>'+
+    '<label class="f">Unit # (what drivers know it as)</label><input type="text" id="su_unit">'+
+    '<label class="f">Plate</label><input type="text" id="su_plate">'+
+    '<label class="f">Make / model</label><input type="text" id="su_desc">'+
+    '<label class="f">Class</label><select id="su_cls"><option value="light">Light vehicle (car, van, pickup)</option><option value="nsc">Commercial — over 4,500 kg (NSC 13)</option></select>'+
+    '<button class="btn" data-action="setupAddVeh">+ Add vehicle</button>'+
+    '<div class="row between"><button class="btn" data-action="setupBack" data-s="1">Back</button>'+
+    '<button class="btn primary" data-action="setupNext2">Next</button></div></div>';
+  }else if(s===3){
+    var dr=(view.tmp.drivers||[]).map(function(d,i){
+      return '<div class="vrow"><span style="flex:1">'+esc(d)+'</span><button class="btn small danger" data-action="setupDelDrv" data-i="'+i+'">✕</button></div>';}).join('');
+    body='<div class="card"><h2>Step 3 — Drivers</h2>'+(dr||'<p class="muted">No drivers yet.</p>')+'</div>'+
+    '<div class="card stack"><label class="f">Driver name</label><input type="text" id="su_driver">'+
+    '<button class="btn" data-action="setupAddDrv">+ Add driver</button>'+
+    '<div class="row between"><button class="btn" data-action="setupBack" data-s="2">Back</button>'+
+    '<button class="btn primary" data-action="setupNext3">Next</button></div></div>';
+  }else{
+    body='<div class="card stack"><h2>Step 4 — Checklists</h2>'+
+    '<p class="muted">Rollworthy ships with sensible defaults. You can edit every checklist later in Manager → Company.</p>'+
+    '<p><strong>Light vehicles:</strong> <span class="muted">'+view.tmp.checklist.light.length+' items</span><br>'+
+    '<strong>Commercial (NSC 13):</strong> <span class="muted">'+view.tmp.checklist.nsc.length+' items</span><br>'+
+    '<strong>Check-in:</strong> <span class="muted">'+view.tmp.checklist.checkin.length+' items</span></p>'+
+    '<div class="row between"><button class="btn" data-action="setupBack" data-s="3">Back</button>'+
+    '<button class="btn primary" data-action="setupFinish">Finish setup</button></div></div>';
+  }
+  h(header('Rollworthy','Company setup')+'<main>'+body+'</main>');
+}
+
+function renderHome(){
+  var driver=localStorage.getItem(LS_DRIVER)||'';
+  var opts='<option value="">— select your name —</option>'+cfg.drivers.map(function(d){
+    return '<option value="'+esc(d)+'"'+(d===driver?' selected':'')+'>'+esc(d)+'</option>';}).join('');
+  var recent=records.slice().sort(function(a,b){return b.ts-a.ts;}).slice(0,5).map(recRow).join('');
+  var unshared=records.filter(function(r){return !r.shared;}).length;
+  h(header('Rollworthy', cfg.company)+
+  '<main>'+
+    '<div class="card"><label class="f">Driver</label><select id="driverSel">'+opts+'</select></div>'+
+    '<button class="big out" data-action="go" data-type="out">🚚 Check Out Vehicle</button>'+
+    '<button class="big in" data-action="go" data-type="in">↩️ Check In Vehicle</button>'+
+    (unshared?'<div class="card"><div class="row between"><div><strong>'+unshared+' record'+(unshared>1?'s':'')+' not yet shared</strong>'+infoI('share')+'<div class="muted">Send them to your manager.</div></div>'+
+      '<button class="btn gold" data-action="shareUnshared">Share</button></div></div>':'')+
+    '<div class="card"><h2>Recent</h2>'+(recent||'<p class="muted">No records yet on this phone.</p>')+'</div>'+
+    '<footer class="egs">Rollworthy · EGS · v'+esc(window.EGS_VERSION)+'<br>All data stays on this device. <button class="btn small" data-action="privacy" style="margin-top:6px">Privacy</button></footer>'+
+  '</main>');
+}
+function recRow(r){
+  var v=vehById(r.vehicleId);
+  var defs=(r.items||[]).filter(function(i){return i.status&&i.status!=='ok';}).length;
+  return '<button class="vrow" data-action="openRec" data-id="'+esc(r.id)+'">'+
+    '<span class="pill '+(r.type==='out'?'out':'in')+'">'+(r.type==='out'?'OUT':'IN')+'</span>'+
+    '<span style="flex:1"><strong>'+esc(v?v.unit:r.unit||'?')+'</strong> · '+esc(r.driver)+
+    '<div class="sub">'+fmtDT(r.ts)+' · '+esc(String(r.odometer))+' km</div></span>'+
+    (defs?'<span class="pill def">'+defs+' defect'+(defs>1?'s':'')+'</span>':'')+
+  '</button>';
+}
+
+function renderPick(){
+  var canScan='BarcodeDetector' in window;
+  var q=(view.q||'').toLowerCase();
+  var list=cfg.vehicles.filter(function(v){
+    return !q || (v.unit+' '+(v.plate||'')+' '+(v.desc||'')).toLowerCase().indexOf(q)!==-1;
+  }).map(function(v){
+    return '<button class="vrow" data-action="pickVeh" data-id="'+esc(v.id)+'">'+
+    '<span class="unit">'+esc(v.unit)+'</span><span style="flex:1">'+esc(v.desc||'')+'<div class="sub">'+esc(v.plate||'')+'</div></span>'+
+    (v.cls==='nsc'?'<span class="tag">NSC 13</span>':'')+'</button>';
+  }).join('');
+  h(header(view.type==='out'?'Check Out':'Check In','Choose vehicle','goHome')+
+  '<main>'+
+    (canScan?'<button class="big out" data-action="openScan">📷 Scan dash sticker</button>':'')+
+    '<div class="card"><input type="text" id="vehSearch" placeholder="Search unit, plate…" value="'+esc(view.q||'')+'">'+
+    (list||'<p class="muted">No vehicles match.</p>')+'</div>'+
+  '</main>');
+}
+
+function renderInspect(){
+  var v=vehById(draft.vehicleId);
+  var isNSC=v.cls==='nsc' && draft.type==='out';
+  var last=lastOdo(v.id);
+  var items=draft.items.map(function(it,idx){
+    var segs;
+    if(isNSC){
+      segs='<div class="seg">'+
+      '<button data-action="setItem" data-i="'+idx+'" data-v="ok" class="'+(it.status==='ok'?'on-ok':'')+'">OK</button>'+
+      '<button data-action="setItem" data-i="'+idx+'" data-v="minor" class="'+(it.status==='minor'?'on-min':'')+'">Minor</button>'+
+      '<button data-action="setItem" data-i="'+idx+'" data-v="major" class="'+(it.status==='major'?'on-def':'')+'">Major</button></div>';
+    }else{
+      segs='<div class="seg">'+
+      '<button data-action="setItem" data-i="'+idx+'" data-v="ok" class="'+(it.status==='ok'?'on-ok':'')+'">OK</button>'+
+      '<button data-action="setItem" data-i="'+idx+'" data-v="def" class="'+(it.status==='def'?'on-def':'')+'">Defect</button></div>';
+    }
+    var defbox='';
+    if(it.status&&it.status!=='ok'){
+      defbox='<div class="defbox stack">'+
+      '<textarea data-role="itemNote" data-i="'+idx+'" placeholder="Describe the problem (required)">'+esc(it.note||'')+'</textarea>'+
+      '<div class="row">'+(it.photoId?'<img class="photo-thumb" data-photo="'+esc(it.photoId)+'" alt="defect photo">':'')+
+      '<button class="btn" data-action="itemPhoto" data-i="'+idx+'">📷 '+(it.photoId?'Retake photo':'Add photo'+(cfg.settings.requireDefectPhoto?' (required)':''))+'</button></div></div>';
+    }
+    return '<div class="item"><div class="lbl">'+esc(it.label)+'</div>'+segs+defbox+'</div>';
+  }).join('');
+  h(header((draft.type==='out'?'Check Out':'Check In')+' — '+v.unit, esc(v.desc||''), 'backToPick')+
+  '<main>'+
+    (isNSC?'<div class="alertbar softwarn">Commercial vehicle — NSC 13 daily inspection'+infoI('nsc')+'</div>':'')+
+    '<div class="card stack">'+
+      '<label class="f">Odometer (km)'+infoI('odo')+(last!=null?' <span class="muted">— last recorded: '+esc(String(last))+'</span>':'')+'</label>'+
+      '<input type="number" id="odoIn" inputmode="numeric" value="'+(draft.odometer!=null?esc(String(draft.odometer)):'')+'">'+
+      '<div class="row">'+(draft.odoPhotoId?'<img class="photo-thumb" data-photo="'+esc(draft.odoPhotoId)+'" alt="odometer photo">':'')+
+      '<button class="btn" data-action="odoPhoto">📷 '+(draft.odoPhotoId?'Retake odometer photo':'Odometer photo'+(cfg.settings.requireOdoPhoto?' (required)':''))+'</button></div>'+
+      '<label class="f">Fuel level'+infoI('fuel')+'</label>'+
+      '<div class="fuel">'+FUELS.map(function(f){return '<button data-action="setFuel" data-v="'+esc(f)+'" class="'+(draft.fuel===f?'on':'')+'">'+esc(f)+'</button>';}).join('')+'</div>'+
+    '</div>'+
+    '<div class="card"><h2>Inspection'+infoI('items')+'</h2>'+items+'</div>'+
+    '<div class="card stack"><label class="f">Notes (optional)</label>'+
+      '<textarea id="genNotes" placeholder="Anything else worth recording">'+esc(draft.notes||'')+'</textarea>'+
+      '<button class="btn primary big" style="min-height:56px" data-action="saveRecord">Save '+(draft.type==='out'?'check-out':'check-in')+'</button>'+
+    '</div>'+
+  '</main>');
+}
+
+function renderDone(){
+  var r=view.rec, v=vehById(r.vehicleId);
+  var major=(r.items||[]).some(function(i){return i.status==='major';});
+  var defs=(r.items||[]).filter(function(i){return i.status&&i.status!=='ok';}).length;
+  h(header('Saved','','goHome')+
+  '<main>'+
+    (major?'<div class="alertbar major">⛔ MAJOR DEFECT — under NSC 13 this vehicle must NOT be operated until repaired. Report to your manager immediately.</div>':'')+
+    '<div class="card center stack"><h2>'+(r.type==='out'?'Check-out':'Check-in')+' recorded ✔</h2>'+
+    '<p>'+esc(v.unit)+' · '+esc(r.driver)+' · '+fmtDT(r.ts)+(defs?'<br><strong>'+defs+' defect'+(defs>1?'s':'')+' recorded</strong>':'')+'</p>'+
+    '<button class="btn gold" data-action="shareRec" data-id="'+esc(r.id)+'">Share with manager'+'</button>'+
+    '<button class="btn" data-action="goHome">Done</button></div>'+
+  '</main>');
+}
+
+function renderRecDetail(){
+  var r=null;for(var i=0;i<records.length;i++)if(records[i].id===view.id)r=records[i];
+  if(!r){go('home');return;}
+  var v=vehById(r.vehicleId);
+  var items=(r.items||[]).map(function(it,idx){
+    var st=it.status==='ok'?'<span class="pill res">OK</span>':
+      (it.status==='minor'?'<span class="pill def" style="background:var(--warn)">MINOR</span>':
+      '<span class="pill def">'+(it.status==='major'?'MAJOR':'DEFECT')+'</span>');
+    var key=r.id+'|'+idx, res=resolutions[key];
+    return '<div class="item"><div class="row between"><span>'+esc(it.label)+'</span>'+st+'</div>'+
+      (it.note?'<div class="muted">'+esc(it.note)+'</div>':'')+
+      (it.photoId?'<img class="photo-thumb" data-photo="'+esc(it.photoId)+'" alt="photo" style="margin-top:6px">':'')+
+      (res?'<div class="muted">✔ Resolved '+fmtDT(res.ts)+(res.note?' — '+esc(res.note):'')+'</div>':'')+
+    '</div>';
+  }).join('');
+  h(header((r.type==='out'?'Check-out':'Check-in')+' — '+(v?v.unit:r.unit||'?'), fmtDT(r.ts), view.from==='manager'?'backToManager':'goHome')+
+  '<main><div class="card">'+
+    '<p><strong>Driver:</strong> '+esc(r.driver)+'<br><strong>Odometer:</strong> '+esc(String(r.odometer))+' km'+
+    (r.fuel?'<br><strong>Fuel:</strong> '+esc(r.fuel):'')+'</p>'+
+    (r.odoPhotoId?'<img class="photo-thumb" data-photo="'+esc(r.odoPhotoId)+'" alt="odometer">':'')+
+    '<hr class="soft">'+items+
+    (r.notes?'<hr class="soft"><p class="muted">'+esc(r.notes)+'</p>':'')+
+    '<hr class="soft"><button class="btn gold" data-action="shareRec" data-id="'+esc(r.id)+'">Share record</button>'+
+  '</div></main>');
+}
+
+/* ---------- manager ---------- */
+function renderManager(){
+  var tab=view.tab||'records';
+  var tabs=['records','defects','vehicles','company'].map(function(t){
+    return '<button data-action="mgrTab" data-t="'+t+'" class="'+(t===tab?'on':'')+'">'+t.charAt(0).toUpperCase()+t.slice(1)+'</button>';}).join('');
+  var body='';
+  if(tab==='records'){
+    var rs=records.slice().sort(function(a,b){return b.ts-a.ts;});
+    body='<div class="card">'+ (rs.length? rs.map(function(r){return recRowMgr(r);}).join('') : '<p class="muted">No records on this phone yet. Import driver files below in Company.</p>')+'</div>'+
+    '<div class="card row"><button class="btn primary" data-action="exportCSV">Export CSV</button>'+
+    '<button class="btn" data-action="importRecords">Import driver records</button></div>';
+  }else if(tab==='defects'){
+    var ds=openDefects();
+    var open=ds.filter(function(d){return !d.resolved;}), done=ds.filter(function(d){return d.resolved;});
+    function defRow(d){
+      var v=vehById(d.rec.vehicleId);
+      return '<div class="rec"><div class="top"><strong>'+esc(v?v.unit:'?')+'</strong>'+
+        '<span class="pill '+(d.resolved?'res':'def')+'">'+(d.resolved?'RESOLVED':(d.item.status==='major'?'MAJOR':d.item.status==='minor'?'MINOR':'OPEN'))+'</span></div>'+
+        '<div>'+esc(d.item.label)+(d.item.note?' — '+esc(d.item.note):'')+'</div>'+
+        '<div class="sub">'+esc(d.rec.driver)+' · '+fmtDT(d.rec.ts)+'</div>'+
+        '<div class="row" style="margin-top:6px"><button class="btn small" data-action="openRecM" data-id="'+esc(d.rec.id)+'">View</button>'+
+        (d.resolved?'':'<button class="btn small primary" data-action="resolveDef" data-key="'+esc(d.key)+'">Mark resolved</button>')+'</div></div>';
+    }
+    body='<div class="card"><h2>Open defects ('+open.length+')</h2>'+(open.map(defRow).join('')||'<p class="muted">Nothing open. 👍</p>')+'</div>'+
+    (done.length?'<div class="card"><h2>Resolved</h2>'+done.slice(0,15).map(defRow).join('')+'</div>':'');
+  }else if(tab==='vehicles'){
+    var vr=cfg.vehicles.map(function(v,i){
+      return '<div class="vrow"><span class="unit">'+esc(v.unit)+'</span><span style="flex:1">'+esc(v.desc||'')+'<div class="sub">'+esc(v.plate||'')+'</div></span>'+
+      (v.cls==='nsc'?'<span class="tag">NSC 13</span>':'')+
+      '<button class="btn small danger" data-action="delVeh" data-i="'+i+'">✕</button></div>';}).join('');
+    body='<div class="card">'+(vr||'<p class="muted">No vehicles.</p>')+'</div>'+
+    '<div class="card stack"><h3>Add vehicle</h3>'+
+    '<label class="f">Unit #</label><input type="text" id="m_unit">'+
+    '<label class="f">Plate</label><input type="text" id="m_plate">'+
+    '<label class="f">Make / model</label><input type="text" id="m_desc">'+
+    '<label class="f">Class</label><select id="m_cls"><option value="light">Light vehicle</option><option value="nsc">Commercial — over 4,500 kg (NSC 13)</option></select>'+
+    '<button class="btn" data-action="addVeh">+ Add vehicle</button></div>'+
+    '<div class="card"><button class="btn gold" data-action="printStickers">🖨 Print dash stickers'+'</button> '+infoI('stickers')+'</div>';
+  }else{
+    body='<div class="card stack"><h2>Company</h2>'+
+    '<label class="f">Company name</label><input type="text" id="c_company" value="'+esc(cfg.company)+'">'+
+    '<button class="btn small" data-action="saveCompany">Save name</button>'+
+    '<button class="btn small" data-action="changePin">Change manager PIN</button></div>'+
+    '<div class="card stack"><h3>Drivers</h3>'+
+      cfg.drivers.map(function(d,i){return '<div class="vrow"><span style="flex:1">'+esc(d)+'</span><button class="btn small danger" data-action="delDrv" data-i="'+i+'">✕</button></div>';}).join('')+
+      '<div class="row"><input type="text" id="c_driver" placeholder="New driver name" style="flex:1"><button class="btn" data-action="addDrv">+ Add</button></div></div>'+
+    '<div class="card stack"><h3>Checklists</h3>'+
+      chkEditor('light','Light vehicle check-out')+chkEditor('nsc','Commercial (NSC 13) check-out')+chkEditor('checkin','Check-in')+'</div>'+
+    '<div class="card stack"><h3>Rules</h3>'+
+      '<label class="row"><input type="checkbox" id="c_odoPhoto" '+(cfg.settings.requireOdoPhoto?'checked':'')+' data-action="toggleOdoPhoto"> Require odometer photo</label>'+
+      '<label class="row"><input type="checkbox" id="c_defPhoto" '+(cfg.settings.requireDefectPhoto?'checked':'')+' data-action="toggleDefPhoto"> Require photo on every defect</label>'+
+      '<label class="f">Theme</label><select id="c_theme" data-action="setTheme"><option value="system"'+(cfg.settings.theme==='system'?' selected':'')+'>Follow system</option><option value="light"'+(cfg.settings.theme==='light'?' selected':'')+'>Daylight</option><option value="dark"'+(cfg.settings.theme==='dark'?' selected':'')+'>Dark</option></select>'+
+      '<label class="row"><input type="checkbox" id="c_beginner" '+(cfg.settings.beginner?'checked':'')+' data-action="toggleBeginner"> Show info markers (beginner mode)</label></div>'+
+    '<div class="card stack"><h3>Share &amp; back up</h3>'+
+      '<button class="btn primary" data-action="exportSetup">Export setup file for drivers'+'</button>'+infoI('setupfile')+
+      '<button class="btn" data-action="importRecords">Import driver records</button>'+
+      '<button class="btn gold" data-action="backupAll">Full backup (settings + records + photos)</button>'+
+      '<button class="btn" data-action="restoreAll">Restore from backup</button>'+
+      '<p class="muted">NSC 13 note: keep commercial inspection records at least 6 months. Your backups are your retention — export regularly.</p></div>'+
+    '<div class="card"><button class="btn" data-action="privacyM">Privacy</button></div>';
+  }
+  h(header('Manager', cfg.company, 'goHome')+'<main><div class="tabs">'+tabs+'</div>'+body+'</main>');
+}
+function chkEditor(key,title){
+  var items=cfg.checklist[key].map(function(it,i){
+    return '<div class="vrow"><span style="flex:1;font-size:14px">'+esc(it)+'</span><button class="btn small danger" data-action="delChk" data-k="'+key+'" data-i="'+i+'">✕</button></div>';}).join('');
+  return '<details><summary style="min-height:44px;display:flex;align-items:center;font-weight:600">'+esc(title)+' ('+cfg.checklist[key].length+')</summary>'+items+
+  '<div class="row" style="margin-top:6px"><input type="text" id="chkAdd_'+key+'" placeholder="New item" style="flex:1"><button class="btn" data-action="addChk" data-k="'+key+'">+ Add</button></div></details>';
+}
+function recRowMgr(r){
+  var v=vehById(r.vehicleId);
+  var defs=(r.items||[]).filter(function(i){return i.status&&i.status!=='ok';}).length;
+  return '<button class="vrow" data-action="openRecM" data-id="'+esc(r.id)+'">'+
+    '<span class="pill '+(r.type==='out'?'out':'in')+'">'+(r.type==='out'?'OUT':'IN')+'</span>'+
+    '<span style="flex:1"><strong>'+esc(v?v.unit:r.unit||'?')+'</strong> · '+esc(r.driver)+
+    '<div class="sub">'+fmtDT(r.ts)+' · '+esc(String(r.odometer))+' km · fuel '+esc(r.fuel||'—')+'</div></span>'+
+    (defs?'<span class="pill def">'+defs+'</span>':'')+'</button>';
+}
+
+function renderPrivacy(){
+  h(header('Privacy','','goHome')+
+  '<main><div class="card stack">'+
+  '<h2>Your data stays here</h2>'+
+  '<p>Rollworthy collects <strong>nothing</strong>. There are no accounts, no analytics, no tracking, and the app makes no network requests for your data — ever.</p>'+
+  '<p><strong>Where your data lives:</strong> on this device only — inspection records and settings in local storage, photos in this device\u2019s app storage. Deleting the app deletes the data.</p>'+
+  '<p><strong>When the app touches the internet:</strong> only to load its own updated version when you\u2019re online. Your records and photos are never transmitted unless <em>you</em> tap Share — and then they go only where you send them.</p>'+
+  '<p><strong>The manager PIN</strong> is a convenience lock stored on this device. It deters casual access; it is not encryption.</p>'+
+  '<p><strong>How EGS makes money:</strong> a fair one-time price paid by the company. No subscriptions hidden in this version, no data resale, no ads. What you see is what you get. 🍁</p>'+
+  '</div></main>');
+}
+
+/* ---------- flows ---------- */
+function go(name,extra){view=Object.assign({name:name},extra||{});render();}
+
+function pinGate(){
+  var p=prompt('Manager PIN:');
+  if(p===null)return false;
+  if(p!==cfg.managerPin){alert('Wrong PIN.');return false;}
+  return true;
+}
+
+function startDraft(type,vehicleId){
+  var v=vehById(vehicleId);
+  draft={id:uid(),schema:1,type:type,ts:Date.now(),vehicleId:v.id,unit:v.unit,plate:v.plate,cls:v.cls,
+    driver:localStorage.getItem(LS_DRIVER)||'',odometer:null,odoPhotoId:null,fuel:null,
+    items:checklistFor(v,type).map(function(l){return{label:l,status:null,note:'',photoId:null};}),
+    notes:'',appVersion:window.EGS_VERSION,synced:false,shared:false};
+  go('inspect');
+}
+
+function collectDraftInputs(){
+  var o=document.getElementById('odoIn'); if(o&&o.value!=='')draft.odometer=parseInt(o.value,10);
+  var n=document.getElementById('genNotes'); if(n)draft.notes=n.value;
+  var notes=document.querySelectorAll('textarea[data-role=itemNote]');
+  Array.prototype.forEach.call(notes,function(t){draft.items[parseInt(t.getAttribute('data-i'),10)].note=t.value;});
+}
+
+function validateDraft(){
+  if(!draft.driver){alert('Select your driver name on the home screen first.');return false;}
+  if(draft.odometer==null||isNaN(draft.odometer)){alert('Enter the odometer reading.');return false;}
+  var last=lastOdo(draft.vehicleId);
+  if(last!=null&&draft.odometer<last){
+    if(!confirm('Odometer ('+draft.odometer+') is LOWER than the last recorded reading ('+last+'). Save anyway?'))return false;
+  }
+  if(cfg.settings.requireOdoPhoto&&!draft.odoPhotoId){alert('An odometer photo is required.');return false;}
+  if(!draft.fuel){alert('Tap the fuel level.');return false;}
+  for(var i=0;i<draft.items.length;i++){var it=draft.items[i];
+    if(!it.status){alert('Answer every checklist item — "'+it.label+'" is blank.');return false;}
+    if(it.status!=='ok'){
+      if(!it.note.trim()){alert('Add a note describing the defect on "'+it.label+'".');return false;}
+      if(cfg.settings.requireDefectPhoto&&!it.photoId){alert('Add a photo of the defect on "'+it.label+'".');return false;}
+    }}
+  return true;
+}
+
+/* ---------- share / export / import ---------- */
+function dl(name,text,type){
+  var b=new Blob([text],{type:type||'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},400);
+}
+function shareOrDl(name,text,type){
+  var b=new Blob([text],{type:type||'application/json'});
+  var f=new File([b],name,{type:b.type});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    navigator.share({files:[f],title:name}).catch(function(){});
+  }else dl(name,text,type);
+}
+function packRecords(list){
+  var pids=[];
+  list.forEach(function(r){if(r.odoPhotoId)pids.push(r.odoPhotoId);(r.items||[]).forEach(function(i){if(i.photoId)pids.push(i.photoId);});});
+  return Promise.all(pids.map(function(id){return getPhoto(id).then(function(b){return b?blobToDataURL(b).then(function(u){return[id,u];}):null;});}))
+  .then(function(pairs){
+    var photos={};pairs.forEach(function(p){if(p&&p[1])photos[p[0]]=p[1];});
+    return JSON.stringify({kind:'ft-records',schema:1,company:cfg.company,exportedAt:Date.now(),records:list,photos:photos});
+  });
+}
+function shareRecords(list,markShared){
+  packRecords(list).then(function(json){
+    shareOrDl('rollworthy-records-'+todayStr()+'.json',json);
+    if(markShared){list.forEach(function(r){r.shared=true;});saveRecords();render();}
+  });
+}
+function exportCSV(){
+  var head='date,time,type,unit,plate,class,driver,odometer_km,fuel,defects,notes,record_id\n';
+  var lines=records.slice().sort(function(a,b){return a.ts-b.ts;}).map(function(r){
+    var d=new Date(r.ts);
+    var defs=(r.items||[]).filter(function(i){return i.status&&i.status!=='ok';})
+      .map(function(i){return i.label+(i.note?' ('+i.note+')':'');}).join('; ');
+    function q(s){s=String(s==null?'':s);return '"'+s.replace(/"/g,'""')+'"';}
+    return [d.toLocaleDateString(),d.toLocaleTimeString(),r.type,q(r.unit),q(r.plate||''),r.cls,q(r.driver),r.odometer,q(r.fuel||''),q(defs),q(r.notes||''),r.id].join(',');
+  }).join('\n');
+  dl('rollworthy-report-'+todayStr()+'.csv',head+lines,'text/csv');
+  cfg.settings.lastBackupAt=Date.now();saveCfg();
+}
+function exportSetup(){
+  var out={kind:'ft-setup',schema:1,company:cfg.company,vehicles:cfg.vehicles,drivers:cfg.drivers,
+    checklist:cfg.checklist,settings:{requireOdoPhoto:cfg.settings.requireOdoPhoto,requireDefectPhoto:cfg.settings.requireDefectPhoto}};
+  shareOrDl('rollworthy-setup-'+todayStr()+'.json',JSON.stringify(out));
+}
+function backupAll(){
+  packRecords(records).then(function(json){
+    var pack=JSON.parse(json);
+    var out={kind:'ft-backup',schema:1,cfg:cfg,records:records,resolutions:resolutions,photos:pack.photos,exportedAt:Date.now()};
+    dl('rollworthy-backup-'+todayStr()+'.json',JSON.stringify(out));
+    cfg.settings.lastBackupAt=Date.now();saveCfg();
+    var nb=document.getElementById('nudgeBanner');if(nb)nb.classList.remove('show');
+  });
+}
+function importPhotos(map){
+  var jobs=[];Object.keys(map||{}).forEach(function(id){var b=dataURLtoBlob(map[id]);if(b)jobs.push(putPhoto(id,b));});
+  return Promise.all(jobs);
+}
+function handleImport(file){
+  var r=new FileReader();
+  r.onload=function(){
+    var data;try{data=JSON.parse(r.result);}catch(e){alert('That file could not be read.');return;}
+    if(data.kind==='ft-setup'&&data.schema===1){
+      if(cfg&&!confirm('Replace this phone\u2019s company setup with "'+data.company+'"? Records are kept.'))return;
+      var pin=cfg?cfg.managerPin:null;
+      cfg={schema:1,company:data.company,managerPin:pin||'0000',vehicles:data.vehicles||[],drivers:data.drivers||[],
+        checklist:data.checklist||{light:DEFAULT_LIGHT.slice(),nsc:DEFAULT_NSC.slice(),checkin:DEFAULT_IN.slice()},
+        settings:Object.assign({theme:'system',beginner:true,requireOdoPhoto:true,requireDefectPhoto:true,lastBackupAt:null},data.settings||{})};
+      saveCfg();alert('Company setup imported: '+data.company);go('home');
+    }else if(data.kind==='ft-records'&&data.schema===1){
+      var have={};records.forEach(function(x){have[x.id]=1;});
+      var added=0;(data.records||[]).forEach(function(x){if(!have[x.id]){records.push(x);added++;}});
+      saveRecords();
+      importPhotos(data.photos).then(function(){alert(added+' new record'+(added===1?'':'s')+' imported ('+((data.records||[]).length-added)+' already present).');render();});
+    }else if(data.kind==='ft-backup'&&data.schema===1){
+      if(!confirm('Restore backup from '+(data.cfg&&data.cfg.company||'?')+'? This REPLACES all settings and records on this phone.'))return;
+      if(!confirm('Are you sure? This cannot be undone.'))return;
+      cfg=data.cfg;records=data.records||[];resolutions=data.resolutions||{};
+      saveCfg();saveRecords();saveRes();
+      importPhotos(data.photos).then(function(){alert('Backup restored.');go('home');});
+    }else alert('Not a Rollworthy file.');
+  };
+  r.readAsText(file);
+}
+
+/* ---------- stickers ---------- */
+function printStickers(){
+  if(typeof qrcode!=='function'){alert('QR generator unavailable.');return;}
+  var htmls=cfg.vehicles.map(function(v){
+    var qr=qrcode(0,'M');qr.addData('FTV1:'+v.id);qr.make();
+    return '<div class="sticker"><div class="c">'+esc(cfg.company)+' · Rollworthy</div>'+
+      '<div class="u">'+esc(v.unit)+'</div><div class="q-grid">'+qr.createSvgTag({cellSize:4,margin:2})+'</div>'+
+      '<div class="c">Scan before you drive · '+esc(v.plate||'')+'</div></div>';
+  }).join('');
+  document.getElementById('stickerSheet').innerHTML=htmls;
+  setTimeout(function(){window.print();},150);
+}
+
+/* ---------- scan ---------- */
+function openScan(){
+  var wrap=document.getElementById('camWrap'),video=document.getElementById('camVideo');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(stream){
+    scanStream=stream;video.srcObject=stream;video.play();wrap.classList.add('show');
+    var det=new window.BarcodeDetector({formats:['qr_code']});
+    scanTimer=setInterval(function(){
+      det.detect(video).then(function(codes){
+        for(var i=0;i<codes.length;i++){
+          var m=/^FTV1:(.+)$/.exec(codes[i].rawValue||'');
+          if(m&&vehById(m[1])){closeScan();startDraft(view.type,m[1]);return;}
+        }
+      }).catch(function(){});
+    },400);
+  }).catch(function(){alert('Camera unavailable. Tap the vehicle from the list instead.');});
+}
+function closeScan(){
+  if(scanTimer){clearInterval(scanTimer);scanTimer=null;}
+  if(scanStream){scanStream.getTracks().forEach(function(t){t.stop();});scanStream=null;}
+  document.getElementById('camWrap').classList.remove('show');
+}
+
+/* ---------- nudge ---------- */
+function maybeNudge(){
+  if(view.name!=='home')return;
+  if(!records.length)return;
+  var snooze=parseInt(localStorage.getItem(LS_NUDGE)||'0',10);
+  if(Date.now()<snooze)return;
+  var last=cfg.settings.lastBackupAt;
+  var due=!last||Date.now()-last>21*24*3600*1000;
+  if(!due)return;
+  var nb=document.getElementById('nudgeBanner');
+  nb.innerHTML='<div class="row between"><div><strong>Back up your records</strong><div class="muted">It\u2019s been a while. Export a backup so nothing is lost.</div></div>'+
+  '<div class="row"><button class="btn small" data-action="snoozeNudge">Later</button><button class="btn small primary" data-action="nudgeBackup">Back up</button></div></div>';
+  nb.classList.add('show');
+}
+
+/* ---------- modal ---------- */
+function showModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modal').classList.add('show');}
+function hideModal(){document.getElementById('modal').classList.remove('show');}
+
+/* ---------- actions ---------- */
+var actions={
+  applyUpdate:function(){if(navigator.serviceWorker&&navigator.serviceWorker.getRegistration){navigator.serviceWorker.getRegistration().then(function(r){if(r&&r.waiting)r.waiting.postMessage('skip');location.reload();});}else location.reload();},
+  showInfo:function(el){showModal('<p>'+esc(INFO[el.getAttribute('data-info')]||'')+'</p><button class="btn primary" data-action="closeModal">Got it</button>');},
+  closeModal:hideModal,
+  privacy:function(){go('privacy');},
+  privacyM:function(){go('privacy');},
+  goHome:function(){draft=null;go('home');},
+  openMenu:function(){
+    showModal('<div class="stack"><h2>Rollworthy</h2>'+
+    '<button class="btn primary" data-action="mgrOpen">Manager tools'+'</button>'+
+    '<button class="btn" data-action="importSetup">Import company setup / records</button>'+
+    '<button class="btn" data-action="privacyModal">Privacy</button>'+
+    '<button class="btn" data-action="closeModal">Close</button></div>');},
+  privacyModal:function(){hideModal();go('privacy');},
+  mgrOpen:function(){hideModal();if(pinGate())go('manager',{tab:'records'});},
+  startSetup:function(){view={name:'setup',step:1,tmp:{vehicles:[],drivers:[],checklist:{light:DEFAULT_LIGHT.slice(),nsc:DEFAULT_NSC.slice(),checkin:DEFAULT_IN.slice()}}};render();},
+  importSetup:function(){hideModal();importMode='any';document.getElementById('importInput').click();},
+  setupNext1:function(){
+    var c=document.getElementById('su_company').value.trim(),p=document.getElementById('su_pin').value.trim();
+    if(!c){alert('Enter the company name.');return;}
+    if(p.length<4){alert('PIN must be at least 4 digits.');return;}
+    view.tmp.company=c;view.tmp.pin=p;view.step=2;render();},
+  setupBack:function(el){view.step=parseInt(el.getAttribute('data-s'),10);render();},
+  setupAddVeh:function(){
+    var u=document.getElementById('su_unit').value.trim();
+    if(!u){alert('Unit # is required.');return;}
+    view.tmp.vehicles.push({id:uid(),unit:u,plate:document.getElementById('su_plate').value.trim(),
+      desc:document.getElementById('su_desc').value.trim(),cls:document.getElementById('su_cls').value});
+    render();},
+  setupDelVeh:function(el){
+    var i=parseInt(el.getAttribute('data-i'),10);
+    if(confirm('Remove vehicle '+view.tmp.vehicles[i].unit+'?')){view.tmp.vehicles.splice(i,1);render();}},
+  setupNext2:function(){if(!view.tmp.vehicles.length){alert('Add at least one vehicle.');return;}view.step=3;render();},
+  setupAddDrv:function(){
+    var d=document.getElementById('su_driver').value.trim();
+    if(!d)return;view.tmp.drivers.push(d);render();},
+  setupDelDrv:function(el){
+    var i=parseInt(el.getAttribute('data-i'),10);
+    if(confirm('Remove driver '+view.tmp.drivers[i]+'?')){view.tmp.drivers.splice(i,1);render();}},
+  setupNext3:function(){if(!view.tmp.drivers.length){alert('Add at least one driver.');return;}view.step=4;render();},
+  setupFinish:function(){
+    cfg={schema:1,company:view.tmp.company,managerPin:view.tmp.pin,vehicles:view.tmp.vehicles,drivers:view.tmp.drivers,
+      checklist:view.tmp.checklist,settings:{theme:'system',beginner:true,requireOdoPhoto:true,requireDefectPhoto:true,lastBackupAt:null}};
+    saveCfg();go('home');},
+  go:function(el){
+    var d=document.getElementById('driverSel');
+    if(d&&d.value)localStorage.setItem(LS_DRIVER,d.value);
+    if(!localStorage.getItem(LS_DRIVER)){alert('Select your driver name first.');return;}
+    go('pick',{type:el.getAttribute('data-type')});},
+  pickVeh:function(el){startDraft(view.type,el.getAttribute('data-id'));},
+  backToPick:function(){if(confirm('Leave this inspection? Nothing has been saved.')){var t=draft.type;draft=null;go('pick',{type:t});}},
+  openScan:openScan, closeScan:closeScan,
+  setFuel:function(el){collectDraftInputs();draft.fuel=el.getAttribute('data-v');render();},
+  setItem:function(el){collectDraftInputs();var it=draft.items[parseInt(el.getAttribute('data-i'),10)];it.status=el.getAttribute('data-v');render();},
+  odoPhoto:function(){collectDraftInputs();photoTarget={kind:'odo'};document.getElementById('photoInput').click();},
+  itemPhoto:function(el){collectDraftInputs();photoTarget={kind:'item',i:parseInt(el.getAttribute('data-i'),10)};document.getElementById('photoInput').click();},
+  saveRecord:function(){
+    collectDraftInputs();
+    if(!validateDraft())return;
+    draft.driver=localStorage.getItem(LS_DRIVER)||draft.driver;
+    draft.ts=Date.now();
+    records.push(draft);saveRecords();
+    var saved=draft;draft=null;
+    go('done',{rec:saved});},
+  shareRec:function(el){
+    var id=el.getAttribute('data-id');
+    var list=records.filter(function(r){return r.id===id;});
+    shareRecords(list,true);},
+  shareUnshared:function(){shareRecords(records.filter(function(r){return !r.shared;}),true);},
+  openRec:function(el){go('recDetail',{id:el.getAttribute('data-id'),from:'home'});},
+  openRecM:function(el){go('recDetail',{id:el.getAttribute('data-id'),from:'manager'});},
+  backToManager:function(){go('manager',{tab:view.fromTab||'records'});},
+  mgrTab:function(el){go('manager',{tab:el.getAttribute('data-t')});},
+  exportCSV:exportCSV,
+  importRecords:function(){importMode='any';document.getElementById('importInput').click();},
+  resolveDef:function(el){
+    var note=prompt('Resolution note (what was done):');
+    if(note===null)return;
+    resolutions[el.getAttribute('data-key')]={ts:Date.now(),note:note.trim()};
+    saveRes();render();},
+  addVeh:function(){
+    var u=document.getElementById('m_unit').value.trim();
+    if(!u){alert('Unit # is required.');return;}
+    cfg.vehicles.push({id:uid(),unit:u,plate:document.getElementById('m_plate').value.trim(),
+      desc:document.getElementById('m_desc').value.trim(),cls:document.getElementById('m_cls').value});
+    saveCfg();render();},
+  delVeh:function(el){
+    var i=parseInt(el.getAttribute('data-i'),10);
+    if(confirm('Delete vehicle '+cfg.vehicles[i].unit+'? Its past records are kept.')){cfg.vehicles.splice(i,1);saveCfg();render();}},
+  addDrv:function(){
+    var d=document.getElementById('c_driver').value.trim();
+    if(!d)return;cfg.drivers.push(d);saveCfg();render();},
+  delDrv:function(el){
+    var i=parseInt(el.getAttribute('data-i'),10);
+    if(confirm('Remove driver '+cfg.drivers[i]+'?')){cfg.drivers.splice(i,1);saveCfg();render();}},
+  addChk:function(el){
+    var k=el.getAttribute('data-k'),inp=document.getElementById('chkAdd_'+k);
+    var v=inp.value.trim();if(!v)return;cfg.checklist[k].push(v);saveCfg();render();},
+  delChk:function(el){
+    var k=el.getAttribute('data-k'),i=parseInt(el.getAttribute('data-i'),10);
+    if(confirm('Remove checklist item "'+cfg.checklist[k][i]+'"?')){cfg.checklist[k].splice(i,1);saveCfg();render();}},
+  saveCompany:function(){cfg.company=document.getElementById('c_company').value.trim()||cfg.company;saveCfg();render();},
+  changePin:function(){
+    var old=prompt('Current PIN:');if(old===null)return;
+    if(old!==cfg.managerPin){alert('Wrong PIN.');return;}
+    var np=prompt('New PIN (4+ digits):');if(np===null)return;
+    if(np.trim().length<4){alert('Too short.');return;}
+    cfg.managerPin=np.trim();saveCfg();alert('PIN changed.');},
+  toggleOdoPhoto:function(el){cfg.settings.requireOdoPhoto=el.checked;saveCfg();},
+  toggleDefPhoto:function(el){cfg.settings.requireDefectPhoto=el.checked;saveCfg();},
+  toggleBeginner:function(el){cfg.settings.beginner=el.checked;saveCfg();applyTheme();},
+  setTheme:function(el){cfg.settings.theme=el.value;saveCfg();applyTheme();},
+  exportSetup:exportSetup,
+  backupAll:backupAll,
+  nudgeBackup:function(){if(pinGate())backupAll();},
+  snoozeNudge:function(){localStorage.setItem(LS_NUDGE,String(Date.now()+7*24*3600*1000));document.getElementById('nudgeBanner').classList.remove('show');},
+  restoreAll:function(){importMode='any';document.getElementById('importInput').click();},
+  printStickers:printStickers
+};
+
+document.addEventListener('click',function(e){
+  var el=e.target.closest('[data-action]');
+  if(!el)return;
+  var fn=actions[el.getAttribute('data-action')];
+  if(fn){e.preventDefault();fn(el);}
+});
+document.addEventListener('change',function(e){
+  var el=e.target;
+  if(el.id==='vehSearch'){view.q=el.value;render();var s=document.getElementById('vehSearch');if(s){s.focus();}}
+  if(el.id==='driverSel'&&el.value)localStorage.setItem(LS_DRIVER,el.value);
+  if(el.id==='photoInput'&&el.files&&el.files[0]){
+    var f=el.files[0];el.value='';
+    downscale(f).then(function(blob){
+      if(!blob){alert('Could not read that photo.');return;}
+      var id=uid();
+      putPhoto(id,blob).then(function(){
+        if(photoTarget&&photoTarget.kind==='odo')draft.odoPhotoId=id;
+        else if(photoTarget&&photoTarget.kind==='item')draft.items[photoTarget.i].photoId=id;
+        photoTarget=null;render();
+      });
+    });
+  }
+  if(el.id==='importInput'&&el.files&&el.files[0]){var f2=el.files[0];el.value='';handleImport(f2);}
+  var act=el.getAttribute&&el.getAttribute('data-action');
+  if(act&&(el.type==='checkbox'||el.tagName==='SELECT')&&actions[act])actions[act](el);
+});
+document.addEventListener('input',function(e){
+  if(e.target.id==='vehSearch'){view.q=e.target.value;
+    /* live filter without full re-render focus loss: simple re-render is fine on change; skip on input */}
+});
+document.getElementById('modal').addEventListener('click',function(e){if(e.target.id==='modal')hideModal();});
+
+/* ---------- boot ---------- */
+loadAll();
+render();
+})();
+</script>
+</body>
+</html>

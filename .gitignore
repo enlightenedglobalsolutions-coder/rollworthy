@@ -1,0 +1,11 @@
+# Rollworthy — app repo.
+#
+# egs-deploy.sh writes a timestamped index.html backup before every deploy.
+# Those are working files, never history.
+index.html.bak.*
+*.bak
+*.bak.*
+*.swbak
+
+# macOS
+.DS_Store
